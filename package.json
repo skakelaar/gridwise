@@ -1,0 +1,12 @@
+{
+  "name": "matrix-reasoning-trainer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Independent practice material for abstract matrix reasoning. Static site, no backend.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/",
+    "serve": "node tools/serve.js"
+  },
+  "license": "MIT"
+}

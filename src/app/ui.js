@@ -1,0 +1,681 @@
+// DOM rendering for every screen. Pure "model in, element out"; event handlers are passed in by main.js.
+// No session or storage logic lives here.
+import { renderCell, renderMatrixPreview } from '../render/svg.js';
+import { FAMILY_IDS, FAMILIES, GROUPS, DIFFICULTY_LABELS } from '../engine/index.js';
+import {
+  PRODUCT_NAME, INDEPENDENCE_NOTICE, INTRO_STEPS, PRACTICE_MODES, TIMED_PRESETS,
+  STATS_CAVEAT, PERSONALISATION_NOTE, LIMITATIONS,
+} from './content.js';
+import { formatPercent, formatMs, formatClock, SMALL_SAMPLE } from './stats.js';
+import { describeFilter } from './session.js';
+
+// ---------------------------------------------------------------- tiny DOM helper
+
+export function h(tag, attrs = {}, ...children) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === 'class') el.className = v;
+    else if (k === 'html') el.innerHTML = v;
+    else if (k === 'text') el.textContent = v;
+    else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2).toLowerCase(), v);
+    else if (k === 'dataset') Object.assign(el.dataset, v);
+    else if (v === true) el.setAttribute(k, '');
+    else el.setAttribute(k, String(v));
+  }
+  appendChildren(el, children);
+  return el;
+}
+
+function appendChildren(el, children) {
+  for (const child of children) {
+    if (child == null || child === false) continue;
+    if (Array.isArray(child)) appendChildren(el, child);
+    else if (child instanceof Node) el.appendChild(child);
+    else el.appendChild(document.createTextNode(String(child)));
+  }
+}
+
+export function clear(el) {
+  while (el.firstChild) el.removeChild(el.firstChild);
+}
+
+/** Announce a short message through the persistent polite live region. */
+export function announce(text) {
+  const live = document.getElementById('live');
+  if (!live) return;
+  live.textContent = '';
+  // A tick later so repeated identical messages are still announced.
+  setTimeout(() => { live.textContent = text; }, 30);
+}
+
+export function focusEl(el) {
+  if (!el) return;
+  if (!el.hasAttribute('tabindex') && !/^(a|button|input|select|textarea)$/i.test(el.tagName)) el.setAttribute('tabindex', '-1');
+  try { el.focus({ preventScroll: false }); } catch { /* ignore */ }
+}
+
+export function formatDate(iso) {
+  try {
+    return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  } catch {
+    return iso;
+  }
+}
+
+function link(href, text, cls = 'btn') {
+  return h('a', { class: cls, href }, text);
+}
+
+function screenTitle(text) {
+  return h('h1', { id: 'screen-title', tabindex: '-1' }, text);
+}
+
+// ---------------------------------------------------------------- shared select controls
+
+export function familySelect({ id, value, onChange }) {
+  const sel = h('select', { id, class: 'select', onChange: (e) => onChange(e.target.value) });
+  sel.appendChild(h('option', { value: 'all' }, 'All families (mixed)'));
+  for (const [gid, g] of Object.entries(GROUPS)) {
+    const og = h('optgroup', { label: g.label });
+    og.appendChild(h('option', { value: `group:${gid}` }, `All of: ${g.label}`));
+    for (const fid of FAMILY_IDS) if (FAMILIES[fid].group === gid) og.appendChild(h('option', { value: fid }, FAMILIES[fid].label));
+    sel.appendChild(og);
+  }
+  sel.value = value || 'all';
+  return sel;
+}
+
+export function difficultySelect({ id, value, onChange }) {
+  const sel = h('select', { id, class: 'select', onChange: (e) => onChange(e.target.value) });
+  sel.appendChild(h('option', { value: 'mixed' }, 'Mixed (1–4)'));
+  for (const d of [1, 2, 3, 4]) sel.appendChild(h('option', { value: String(d) }, `${d} – ${DIFFICULTY_LABELS[d]}`));
+  sel.value = String(value ?? 'mixed');
+  return sel;
+}
+
+// ---------------------------------------------------------------- home
+
+export function renderHome({ samplePuzzle }) {
+  const cards = [
+    { href: '#/intro', title: 'Learn the basics', blurb: 'A short, skimmable introduction to how the puzzles work.' },
+    { href: '#/guided', title: PRACTICE_MODES.guided.title, blurb: PRACTICE_MODES.guided.blurb },
+    { href: '#/practice', title: PRACTICE_MODES.untimed.title, blurb: PRACTICE_MODES.untimed.blurb },
+    { href: '#/timed', title: PRACTICE_MODES.timed.title, blurb: PRACTICE_MODES.timed.blurb },
+    { href: '#/review', title: PRACTICE_MODES.review.title, blurb: PRACTICE_MODES.review.blurb },
+    { href: '#/progress', title: 'Progress', blurb: 'Accuracy and response times by rule group and difficulty.' },
+    { href: '#/settings', title: 'Settings and reset', blurb: 'Practice personalisation and clearing local data.' },
+  ];
+  return h('section', { class: 'screen home' },
+    h('div', { class: 'hero' },
+      h('div', { class: 'hero-text' },
+        screenTitle(PRODUCT_NAME),
+        h('p', { class: 'pitch' }, 'Practise 3×3 abstract matrix puzzles and learn the rule behind every answer, with an explanation after each one.'),
+        h('p', { class: 'notice', id: 'independence-notice' }, INDEPENDENCE_NOTICE),
+        h('div', { class: 'hero-actions' },
+          link('#/guided', 'Start practising', 'btn btn-primary btn-lg'),
+          link('#/intro', 'Learn the basics', 'btn'),
+        ),
+      ),
+      h('figure', { class: 'sample' },
+        h('div', { class: 'sample-preview cell', html: renderMatrixPreview(samplePuzzle, { cellSize: 64, gap: 6 }) }),
+        h('figcaption', null, `Sample puzzle: ${samplePuzzle.familyLabel}, ${samplePuzzle.difficultyLabel.toLowerCase()}. Which figure fills the gap?`),
+      ),
+    ),
+    h('nav', { class: 'mode-grid', 'aria-label': 'Practice modes' },
+      cards.map((c) => h('a', { class: 'card', href: c.href },
+        h('span', { class: 'card-title' }, c.title),
+        h('span', { class: 'card-blurb' }, c.blurb),
+      )),
+    ),
+  );
+}
+
+// ---------------------------------------------------------------- intro
+
+export function renderIntro({ examples }) {
+  return h('section', { class: 'screen intro' },
+    screenTitle('Learn the basics'),
+    h('p', { class: 'lead' }, 'Each puzzle is a 3×3 grid. One or more rules run across the rows and down the columns; the bottom-right cell is missing and one of six options completes it.'),
+    h('ol', { class: 'intro-steps' },
+      INTRO_STEPS.map((step, i) => h('li', { class: 'intro-step' },
+        h('div', { class: 'intro-text' },
+          h('h2', null, step.title),
+          h('div', { class: 'intro-body', html: step.body }),
+        ),
+        examples[i] ? h('figure', { class: 'intro-example' },
+          h('div', { class: 'sample-preview cell', html: renderMatrixPreview(examples[i], { cellSize: 52, gap: 5 }) }),
+          h('figcaption', null, `Example: ${examples[i].familyLabel} (${examples[i].difficultyLabel.toLowerCase()})`),
+        ) : null,
+      )),
+    ),
+    h('div', { class: 'actions' },
+      link('#/guided', 'Start guided practice', 'btn btn-primary'),
+      link('#/', 'Back to home', 'btn'),
+    ),
+  );
+}
+
+// ---------------------------------------------------------------- practice settings bar
+
+export function renderPracticeBar({ settings, adaptive, onFamily, onDifficulty }) {
+  const bar = h('form', { class: 'practice-bar', onSubmit: (e) => e.preventDefault() },
+    h('div', { class: 'field' },
+      h('label', { for: 'family-filter' }, 'Family'),
+      familySelect({ id: 'family-filter', value: settings.practiceFamily, onChange: onFamily }),
+    ),
+    h('div', { class: 'field' },
+      h('label', { for: 'difficulty-filter' }, settings.personalise ? 'Starting level' : 'Difficulty'),
+      difficultySelect({ id: 'difficulty-filter', value: settings.practiceDifficulty, onChange: onDifficulty }),
+    ),
+  );
+  if (settings.personalise) {
+    bar.appendChild(h('p', { class: 'bar-note' },
+      h('strong', null, 'Personalisation on. '),
+      `Current level ${adaptive.level} (${DIFFICULTY_LABELS[adaptive.level]}); ${adaptive.correctStreak} correct in a row. `,
+      h('a', { href: '#/settings' }, 'How this works'),
+    ));
+  }
+  return bar;
+}
+
+// ---------------------------------------------------------------- puzzle screen
+
+const OPTION_NUMBERS = ['1', '2', '3', '4', '5', '6'];
+
+function isDone(model) {
+  return model.mode === 'summary' || model.revealed || (model.answered != null && model.mode !== 'timed');
+}
+
+function matrixCell(puzzle, i, done) {
+  const inRow3 = i >= 6;
+  const inCol3 = i % 3 === 2;
+  const cls = ['cell', 'matrix-cell'];
+  if (done && (inRow3 || inCol3)) cls.push('is-highlight');
+  if (i === 8) cls.push(done ? 'is-filled' : 'is-gap');
+  if (i === 8 && !done) {
+    return h('div', { class: cls.join(' '), role: 'img', 'aria-label': 'Missing cell: choose the option that completes the pattern' },
+      h('span', { class: 'gap-mark', 'aria-hidden': 'true' }, '?'));
+  }
+  const cell = puzzle.cells[i];
+  const label = i === 8 ? `Missing cell, now filled with the correct answer: ${puzzle.description.options[puzzle.correctIndex]}` : puzzle.description.cells[i];
+  return h('div', { class: cls.join(' '), html: renderCell(cell, { size: 100, label }) });
+}
+
+export function renderMatrix(puzzle, { done = false, idPrefix = 'matrix' } = {}) {
+  const descId = `${idPrefix}-desc`;
+  const wrap = h('div', { class: 'matrix-wrap' },
+    h('p', { class: 'visually-hidden', id: descId }, puzzle.description.matrix),
+    h('div', { class: `matrix${done ? ' is-done' : ''}`, role: 'group', 'aria-label': done ? 'Completed puzzle matrix; row 3 and column 3 highlighted' : 'Puzzle matrix', 'aria-describedby': descId },
+      Array.from({ length: 9 }, (_, i) => matrixCell(puzzle, i, done)),
+    ),
+  );
+  if (done) wrap.appendChild(h('p', { class: 'matrix-caption' }, 'Completed matrix. Row 3 and column 3 are highlighted: read along them to see how the answer follows.'));
+  return wrap;
+}
+
+function optionButton(puzzle, i, model, handlers, done) {
+  const chosen = model.answered?.chosenIndex;
+  const isCorrect = i === puzzle.correctIndex;
+  const cls = ['option', 'cell'];
+  const selected = !done && model.selected === i;
+  if (selected) cls.push('is-selected');
+  if (done) {
+    if (isCorrect) cls.push('is-correct');
+    if (chosen === i && !isCorrect) cls.push('is-wrong');
+    if (model.original && model.original.chosenIndex === i && !isCorrect) cls.push('is-original');
+  }
+  let status = '';
+  if (done) {
+    if (isCorrect) status = 'Correct answer';
+    else if (chosen === i) status = 'Your answer';
+    else if (model.original && model.original.chosenIndex === i) status = 'Your earlier answer';
+  }
+  const labelParts = [`Option ${i + 1}: ${puzzle.description.options[i]}`];
+  if (status) labelParts.push(status);
+  const tabbable = done ? i === 0 : (model.selected == null ? i === 0 : model.selected === i);
+  const btn = h('button', {
+    type: 'button',
+    class: cls.join(' '),
+    id: `opt-${i}`,
+    role: 'radio',
+    'aria-checked': selected ? 'true' : 'false',
+    'aria-disabled': done ? 'true' : null,
+    'aria-label': labelParts.join('. '),
+    tabindex: tabbable ? '0' : '-1',
+    dataset: { index: String(i) },
+    onClick: () => { if (!done) handlers.onSelect(i); },
+    onKeydown: (e) => optionKeydown(e, i, model, handlers, done),
+  },
+    h('span', { class: 'option-num', 'aria-hidden': 'true' }, OPTION_NUMBERS[i]),
+    h('span', { class: 'option-fig', html: renderCell(puzzle.options[i], { size: 100 }) }),
+    status ? h('span', { class: 'option-status', 'aria-hidden': 'true' }, status) : null,
+  );
+  return btn;
+}
+
+function optionKeydown(e, i, model, handlers, done) {
+  const group = e.currentTarget.closest('.options');
+  const move = (to) => {
+    const idx = (to + 6) % 6;
+    const target = group.querySelector(`#opt-${idx}`);
+    if (!done) handlers.onSelect(idx);
+    target?.focus();
+  };
+  switch (e.key) {
+    case 'ArrowRight': case 'ArrowDown': e.preventDefault(); move(i + 1); break;
+    case 'ArrowLeft': case 'ArrowUp': e.preventDefault(); move(i - 1); break;
+    case 'Home': e.preventDefault(); move(0); break;
+    case 'End': e.preventDefault(); move(5); break;
+    case ' ': e.preventDefault(); if (!done) handlers.onSelect(i); break;
+    case 'Enter':
+      e.preventDefault();
+      if (done) break;
+      // Compare against the live DOM state: the model snapshot is stale after in-place selection updates.
+      if (e.currentTarget.getAttribute('aria-checked') === 'true') handlers.onSubmit();
+      else handlers.onSelect(i);
+      break;
+    default: break;
+  }
+}
+
+/** Update the option group in place after a selection change (keeps focus and avoids a re-render). */
+export function setSelectedOption(root, index) {
+  root.querySelectorAll('.option').forEach((btn) => {
+    const i = Number(btn.dataset.index);
+    const on = i === index;
+    btn.classList.toggle('is-selected', on);
+    btn.setAttribute('aria-checked', on ? 'true' : 'false');
+    btn.setAttribute('tabindex', on || (index == null && i === 0) ? '0' : '-1');
+  });
+  const msg = root.querySelector('.submit-msg');
+  if (msg) msg.textContent = '';
+}
+
+function hintsPanel(model, handlers) {
+  const { puzzle } = model;
+  const total = puzzle.hints.length;
+  const used = model.hintsUsed;
+  const panel = h('div', { class: 'hints' });
+  if (used > 0) {
+    panel.appendChild(h('ol', { class: 'hint-list', 'aria-label': 'Hints shown' },
+      puzzle.hints.slice(0, used).map((text, k) => h('li', null, h('strong', null, `Hint ${k + 1} of ${total}. `), text)),
+    ));
+  }
+  if (used < total) {
+    panel.appendChild(h('button', { type: 'button', class: 'btn', id: 'hint-btn', onClick: handlers.onHint },
+      used === 0 ? `Show a hint (${total} available)` : `Show the next hint (${used} of ${total} shown)`));
+  } else {
+    panel.appendChild(h('p', { class: 'hint-done' }, `All ${total} hints shown.`));
+    panel.appendChild(h('button', { type: 'button', class: 'btn', id: 'reveal-btn', onClick: handlers.onReveal }, 'Reveal solution'));
+  }
+  return panel;
+}
+
+function explanationBlock(puzzle, chosenIndex, original) {
+  const ex = puzzle.explanation;
+  const items = (arr) => h('ul', null, (arr || []).map((s) => h('li', null, s)));
+  const block = h('div', { class: 'explanation' },
+    ex.summary ? h('p', { class: 'explanation-summary' }, ex.summary) : null,
+    h('h3', null, 'Across each row'), items(ex.rows),
+    h('h3', null, 'Down each column'), items(ex.columns),
+    h('h3', null, 'How the missing cell follows'), items(ex.missing),
+    ex.unchanged ? h('p', { class: 'explanation-unchanged' }, ex.unchanged) : null,
+  );
+  const d = chosenIndex != null ? puzzle.distractors[chosenIndex] : null;
+  if (d) block.appendChild(h('p', { class: 'distractor-note' }, h('strong', null, `Why option ${chosenIndex + 1} is tempting: `), `it ${d.text}.`));
+  if (original && original.chosenIndex != null && original.chosenIndex !== chosenIndex) {
+    const od = puzzle.distractors[original.chosenIndex];
+    block.appendChild(h('p', { class: 'distractor-note is-original' },
+      h('strong', null, `Earlier you chose option ${original.chosenIndex + 1}${original.at ? ` (${formatDate(original.at)})` : ''}. `),
+      od ? `Why it is tempting: it ${od.text}.` : 'That was the correct answer.'));
+  }
+  return block;
+}
+
+function feedbackPanel(model, handlers) {
+  const { puzzle, answered, original } = model;
+  const correctNo = puzzle.correctIndex + 1;
+  let title;
+  let cls = 'feedback-title';
+  let line;
+  if (model.revealed) {
+    title = 'Solution revealed';
+    line = `The correct answer is option ${correctNo}.`;
+  } else if (answered && answered.chosenIndex == null) {
+    title = 'Not answered';
+    line = `You did not answer this puzzle in time. The correct answer is option ${correctNo}.`;
+  } else if (answered?.correct) {
+    title = 'Correct';
+    cls += ' is-correct';
+    line = `Option ${correctNo} completes the pattern${answered.ms != null ? ` (answered in ${formatMs(answered.ms)})` : ''}.`;
+  } else {
+    title = 'Not quite';
+    cls += ' is-wrong';
+    line = `You chose option ${answered.chosenIndex + 1}; the correct answer is option ${correctNo}${answered.ms != null ? ` (answered in ${formatMs(answered.ms)})` : ''}.`;
+  }
+  const chosenIndex = answered?.chosenIndex ?? null;
+  const panel = h('section', { class: 'feedback', 'aria-labelledby': 'feedback-title' },
+    h('h2', { id: 'feedback-title', class: cls, tabindex: '-1' }, title),
+    h('p', { class: 'feedback-line' }, line),
+    explanationBlock(puzzle, chosenIndex, original),
+  );
+  const actions = h('div', { class: 'actions' });
+  if (model.mode === 'review') {
+    actions.appendChild(h('button', { type: 'button', class: 'btn btn-primary', onClick: handlers.onUnderstood }, 'Mark as understood'));
+    actions.appendChild(h('button', { type: 'button', class: 'btn', onClick: handlers.onNext }, 'Try again from scratch'));
+    actions.appendChild(link('#/review', 'Back to mistake list'));
+  } else if (model.mode === 'summary') {
+    actions.appendChild(link('#/timed/summary', 'Back to session summary', 'btn btn-primary'));
+    if (model.prevHref) actions.appendChild(link(model.prevHref, 'Previous puzzle'));
+    if (model.nextHref) actions.appendChild(link(model.nextHref, 'Next puzzle'));
+  } else {
+    actions.appendChild(h('button', { type: 'button', class: 'btn btn-primary', id: 'next-btn', onClick: handlers.onNext }, 'Next puzzle'));
+  }
+  panel.appendChild(actions);
+  return panel;
+}
+
+/**
+ * The shared puzzle screen. model = { puzzle, mode, heading, meta, progress, selected, answered, revealed,
+ * hintsUsed, showHints, original, showCountdown, canSkip, prevHref, nextHref }.
+ */
+export function renderPuzzleScreen(model, handlers) {
+  const { puzzle } = model;
+  const done = isDone(model);
+  const root = h('section', { class: 'screen puzzle-screen', dataset: { mode: model.mode } });
+
+  const head = h('header', { class: 'puzzle-head' },
+    h('div', null,
+      screenTitle(model.heading),
+      h('p', { class: 'puzzle-meta' },
+        h('span', { class: 'tag' }, puzzle.familyLabel),
+        h('span', { class: 'tag' }, `Level ${puzzle.difficulty}: ${puzzle.difficultyLabel}`),
+        model.progress ? h('span', { class: 'tag tag-progress' }, model.progress) : null,
+        model.note ? h('span', { class: 'tag' }, model.note) : null,
+      ),
+    ),
+  );
+  if (model.showCountdown) {
+    head.appendChild(h('div', { class: 'countdown-wrap' },
+      h('p', { class: 'countdown', role: 'timer', id: 'countdown', 'aria-label': 'Time remaining' }, '–:––'),
+      h('button', {
+        type: 'button', class: 'btn btn-small', id: 'end-early', 'aria-describedby': 'end-early-help',
+        onClick: (ev) => {
+          // Two presses are needed so a stray Enter cannot discard a session.
+          const b = ev.currentTarget;
+          if (b.dataset.armed === '1') { handlers.onStop(); return; }
+          b.dataset.armed = '1';
+          b.textContent = 'Press again to end';
+          b.classList.add('btn-danger');
+          const help = document.getElementById('end-early-help');
+          if (help) help.textContent = 'Press again to end the session now. Move away to keep going.';
+          b.addEventListener('blur', () => {
+            b.dataset.armed = '';
+            b.textContent = 'End session early';
+            b.classList.remove('btn-danger');
+            if (help) help.textContent = '';
+          }, { once: true });
+        },
+      }, 'End session early'),
+      h('span', { id: 'end-early-help', class: 'visually-hidden', 'aria-live': 'polite' }),
+    ));
+  }
+  root.appendChild(head);
+  if (model.bar) root.appendChild(model.bar);
+
+  const options = h('div', { class: 'options', role: 'radiogroup', 'aria-label': 'Answer options. Use arrow keys or the number keys 1 to 6 to choose, Enter to submit' },
+    Array.from({ length: 6 }, (_, i) => optionButton(puzzle, i, model, handlers, done)),
+  );
+  const optionsWrap = h('div', { class: 'options-wrap' },
+    h('h2', { class: 'options-title' }, done ? 'Options' : 'Which option completes the pattern?'),
+    options,
+  );
+  if (!done) {
+    const actions = h('div', { class: 'actions' },
+      h('button', { type: 'button', class: 'btn btn-primary', id: 'submit-btn', onClick: handlers.onSubmit }, model.mode === 'timed' ? 'Submit and continue' : 'Check answer'),
+      model.canSkip ? h('button', { type: 'button', class: 'btn', onClick: handlers.onSkip }, 'Skip (leave unanswered)') : null,
+      model.mode === 'review' ? h('button', { type: 'button', class: 'btn', id: 'reveal-btn', onClick: handlers.onReveal }, 'Reveal solution') : null,
+      model.mode === 'untimed' ? h('button', { type: 'button', class: 'btn', onClick: handlers.onNext }, 'Skip to next puzzle') : null,
+    );
+    optionsWrap.appendChild(actions);
+    optionsWrap.appendChild(h('p', { class: 'submit-msg', role: 'status' }));
+    if (model.showHints) optionsWrap.appendChild(hintsPanel(model, handlers));
+  }
+
+  root.appendChild(h('div', { class: 'puzzle-layout' }, renderMatrix(puzzle, { done }), optionsWrap));
+  if (done) root.appendChild(feedbackPanel(model, handlers));
+  return root;
+}
+
+// ---------------------------------------------------------------- timed setup and summary
+
+export function renderTimedSetup({ settings, resumable }, handlers) {
+  const state = { count: settings.timedCount, minutes: settings.timedMinutes, family: settings.timedFamily, difficulty: settings.timedDifficulty };
+  const countInput = h('input', { type: 'number', id: 'timed-count', class: 'input', min: '5', max: '40', step: '1', value: String(state.count), required: true, inputmode: 'numeric' });
+  const minInput = h('input', { type: 'number', id: 'timed-minutes', class: 'input', min: '1', max: '60', step: '1', value: String(state.minutes), required: true, inputmode: 'numeric' });
+  const presetList = h('div', { class: 'preset-list', role: 'group', 'aria-label': 'Presets' },
+    TIMED_PRESETS.map((p) => h('div', { class: 'preset' },
+      h('button', { type: 'button', class: 'btn', onClick: () => { countInput.value = String(p.count); minInput.value = String(p.minutes); announce(`Preset applied: ${p.count} puzzles in ${p.minutes} minutes.`); countInput.focus(); } },
+        p.id === 'twelve' ? `${p.label} — practice preset` : p.label),
+      p.note ? h('p', { class: 'preset-note' }, p.note) : null,
+    )),
+  );
+  const form = h('form', { class: 'timed-form', onSubmit: (e) => {
+    e.preventDefault();
+    const count = Math.min(40, Math.max(5, Math.round(Number(countInput.value) || 0)));
+    const minutes = Math.min(60, Math.max(1, Math.round(Number(minInput.value) || 0)));
+    countInput.value = String(count);
+    minInput.value = String(minutes);
+    handlers.onStart({ count, minutes, family: state.family, difficulty: state.difficulty });
+  } },
+    h('fieldset', null,
+      h('legend', null, 'Presets'),
+      presetList,
+    ),
+    h('fieldset', null,
+      h('legend', null, 'Custom session'),
+      h('div', { class: 'field-row' },
+        h('div', { class: 'field' }, h('label', { for: 'timed-count' }, 'Puzzles (5–40)'), countInput),
+        h('div', { class: 'field' }, h('label', { for: 'timed-minutes' }, 'Minutes (1–60)'), minInput),
+        h('div', { class: 'field' }, h('label', { for: 'timed-family' }, 'Family'), familySelect({ id: 'timed-family', value: state.family, onChange: (v) => { state.family = v; } })),
+        h('div', { class: 'field' }, h('label', { for: 'timed-difficulty' }, 'Difficulty'), difficultySelect({ id: 'timed-difficulty', value: state.difficulty, onChange: (v) => { state.difficulty = v; } })),
+      ),
+    ),
+    h('div', { class: 'actions' },
+      h('button', { type: 'submit', class: 'btn btn-primary' }, 'Start timed session'),
+      link('#/', 'Back to home'),
+    ),
+  );
+  const screen = h('section', { class: 'screen timed-setup' },
+    screenTitle('Timed session'),
+    h('p', { class: 'lead' }, 'Answer as many puzzles as you can before the clock runs out. Feedback and explanations are shown in the summary at the end; unanswered puzzles count as unanswered, not as wrong.'),
+  );
+  if (resumable) {
+    screen.appendChild(h('div', { class: 'banner', role: 'region', 'aria-label': 'Unfinished session' },
+      h('p', null, h('strong', null, 'You have an unfinished timed session. '), `${resumable.index} of ${resumable.count} puzzles done.`),
+      h('div', { class: 'actions' },
+        h('button', { type: 'button', class: 'btn btn-primary', onClick: handlers.onResume }, 'Resume session'),
+        h('button', { type: 'button', class: 'btn', onClick: handlers.onDiscard }, 'Discard it'),
+      ),
+    ));
+  }
+  screen.appendChild(form);
+  return screen;
+}
+
+export function renderTimedSummary({ session, summary }) {
+  const endedText = { completed: 'All puzzles answered or skipped.', time: 'Time ran out.', stopped: 'Ended early.' }[summary.endedBy] || '';
+  const rows = session.items.map((item, i) => {
+    const puzzle = { familyLabel: FAMILIES[item.family]?.label || item.family, difficultyLabel: DIFFICULTY_LABELS[item.difficulty] };
+    const result = item.chosenIndex == null ? 'Unanswered' : item.correct ? 'Correct' : 'Incorrect';
+    const cls = item.chosenIndex == null ? 'is-unanswered' : item.correct ? 'is-correct' : 'is-wrong';
+    return h('tr', null,
+      h('td', null, String(i + 1)),
+      h('td', null, puzzle.familyLabel),
+      h('td', null, `${item.difficulty} – ${puzzle.difficultyLabel}`),
+      h('td', null, h('span', { class: `result ${cls}` }, result)),
+      h('td', null, formatMs(item.ms)),
+      h('td', null, h('a', { href: `#/timed/summary/${i}`, class: 'btn btn-small' }, `Review`, h('span', { class: 'visually-hidden' }, ` puzzle ${i + 1}`))),
+    );
+  });
+  return h('section', { class: 'screen timed-summary' },
+    screenTitle('Session summary'),
+    h('p', { class: 'lead' }, endedText),
+    h('div', { class: 'stat-tiles' },
+      statTile('Score', `${summary.correct} / ${summary.total}`, `${summary.wrong} incorrect, ${summary.unanswered} unanswered`),
+      statTile('Accuracy of answered', formatPercent(summary.answered ? summary.correct / summary.answered : null), `${summary.answered} answered`),
+      statTile('Time used', formatMs(summary.usedMs), `of ${session.minutes} min`),
+    ),
+    h('div', { class: 'table-wrap' },
+      h('table', { class: 'table' },
+        h('caption', { class: 'visually-hidden' }, 'Per-puzzle results'),
+        h('thead', null, h('tr', null, ['#', 'Family', 'Difficulty', 'Result', 'Time', 'Explanation'].map((t) => h('th', { scope: 'col' }, t)))),
+        h('tbody', null, rows),
+      ),
+    ),
+    h('div', { class: 'actions' },
+      link('#/timed', 'New timed session', 'btn btn-primary'),
+      link('#/progress', 'See progress'),
+      link('#/', 'Home'),
+    ),
+  );
+}
+
+function statTile(label, value, sub) {
+  return h('div', { class: 'stat-tile' },
+    h('span', { class: 'stat-label' }, label),
+    h('span', { class: 'stat-value' }, value),
+    sub ? h('span', { class: 'stat-sub' }, sub) : null,
+  );
+}
+
+// ---------------------------------------------------------------- mistake review list
+
+export function renderReviewList({ mistakes }, handlers) {
+  const screen = h('section', { class: 'screen review-list' },
+    screenTitle('Mistake review'),
+    h('p', { class: 'lead' }, 'Puzzles you answered incorrectly, most recent first. Each one is regenerated from its seed, so you can retry it, then read the explanation and see why your earlier choice was tempting.'),
+  );
+  if (!mistakes.length) {
+    screen.appendChild(h('p', { class: 'empty' }, 'No mistakes stored yet. Mistakes from any mode appear here automatically.'));
+    screen.appendChild(h('div', { class: 'actions' }, link('#/guided', 'Start practising', 'btn btn-primary'), link('#/', 'Home')));
+    return screen;
+  }
+  screen.appendChild(h('ul', { class: 'mistake-list' },
+    mistakes.map((m) => h('li', { class: 'mistake' },
+      h('div', { class: 'mistake-text' },
+        h('span', { class: 'mistake-title' }, `${FAMILIES[m.family]?.label || m.family} · Level ${m.difficulty} (${DIFFICULTY_LABELS[m.difficulty] || ''})`),
+        h('span', { class: 'mistake-meta' }, `${formatDate(m.at)} · ${GROUPS[m.group]?.label || ''}`),
+      ),
+      h('div', { class: 'mistake-actions' },
+        h('a', { class: 'btn btn-primary btn-small', href: `#/review/${encodeURIComponent(m.puzzleId)}` }, 'Retry', h('span', { class: 'visually-hidden' }, ` ${FAMILIES[m.family]?.label || m.family} from ${formatDate(m.at)}`)),
+        h('button', { type: 'button', class: 'btn btn-small', onClick: () => handlers.onUnderstood(m.puzzleId) }, 'Mark as understood', h('span', { class: 'visually-hidden' }, ` ${FAMILIES[m.family]?.label || m.family} from ${formatDate(m.at)}`)),
+      ),
+    )),
+  ));
+  return screen;
+}
+
+// ---------------------------------------------------------------- progress
+
+function statsTable(caption, rows) {
+  return h('div', { class: 'table-wrap' },
+    h('table', { class: 'table stats-table' },
+      h('caption', null, caption),
+      h('thead', null, h('tr', null, ['Category', 'Attempted', 'Accuracy', 'Median time', ''].map((t) => h('th', { scope: 'col' }, t)))),
+      h('tbody', null, rows.map((r) => h('tr', { class: r.smallSample ? 'is-small' : null },
+        h('th', { scope: 'row' }, r.label),
+        h('td', null, String(r.attempted)),
+        h('td', null,
+          h('span', { class: 'bar', 'aria-hidden': 'true' }, h('span', { class: 'bar-fill', style: `width:${Math.round((r.accuracy || 0) * 100)}%` })),
+          h('span', { class: 'bar-text' }, formatPercent(r.accuracy)),
+        ),
+        h('td', null, formatMs(r.medianMs)),
+        h('td', null, r.smallSample ? h('span', { class: 'small-sample' }, r.attempted ? 'small sample' : 'no data') : ''),
+      ))),
+    ),
+  );
+}
+
+export function renderProgress({ overall, groups, difficulties }) {
+  return h('section', { class: 'screen progress' },
+    screenTitle('Progress'),
+    h('p', { class: 'lead caveat' }, STATS_CAVEAT, ` Rows with fewer than ${SMALL_SAMPLE} attempts are marked “small sample”.`),
+    h('div', { class: 'stat-tiles' },
+      statTile('Attempted', String(overall.attempted), overall.smallSample ? 'small sample' : ''),
+      statTile('Overall accuracy', formatPercent(overall.accuracy), `${overall.correct} correct`),
+      statTile('Median response time', formatMs(overall.medianMs), ''),
+    ),
+    statsTable('By rule group', groups),
+    statsTable('By difficulty', difficulties),
+    h('div', { class: 'actions' }, link('#/guided', 'Practise more', 'btn btn-primary'), link('#/', 'Home')),
+  );
+}
+
+// ---------------------------------------------------------------- settings
+
+export function renderSettings({ settings, adaptive, storageOk, confirming }, handlers) {
+  const screen = h('section', { class: 'screen settings' },
+    screenTitle('Settings'),
+    h('section', { class: 'settings-block', 'aria-labelledby': 'personalise-title' },
+      h('h2', { id: 'personalise-title' }, 'Practice personalisation'),
+      h('div', { class: 'check-row' },
+        h('input', { type: 'checkbox', id: 'personalise', checked: settings.personalise ? true : null, onChange: (e) => handlers.onPersonalise(e.target.checked) }),
+        h('label', { for: 'personalise' }, 'Personalise guided and untimed practice (default: off)'),
+      ),
+      h('p', { class: 'note' }, PERSONALISATION_NOTE),
+      h('p', { class: 'note-small' }, `“Recent” means your last 30 attempts. Current level: ${adaptive.level} (${DIFFICULTY_LABELS[adaptive.level]}). The “Starting level” control on the practice screen resets the level.`),
+    ),
+    h('section', { class: 'settings-block', 'aria-labelledby': 'storage-title' },
+      h('h2', { id: 'storage-title' }, 'Local data'),
+      h('p', { class: 'note' }, storageOk
+        ? 'Attempts, mistakes, settings and any unfinished timed session are stored in this browser only (localStorage keys starting with “mrt.”). No data leaves your browser.'
+        : 'Browser storage is unavailable, so nothing persists between page loads. The app still works for this visit.'),
+      confirming
+        ? h('div', { class: 'banner banner-danger', role: 'region', 'aria-label': 'Confirm reset' },
+          h('p', null, h('strong', null, 'Delete all local data? '), 'This clears your attempt history, mistakes, settings and any unfinished timed session. It cannot be undone.'),
+          h('div', { class: 'actions' },
+            h('button', { type: 'button', class: 'btn btn-danger', id: 'reset-confirm', onClick: handlers.onResetConfirm }, 'Yes, delete everything'),
+            h('button', { type: 'button', class: 'btn', onClick: handlers.onResetCancel }, 'Cancel'),
+          ))
+        : h('button', { type: 'button', class: 'btn btn-danger', id: 'reset-btn', onClick: handlers.onResetStart }, 'Reset all local data'),
+    ),
+    h('div', { class: 'actions' }, link('#/about', 'About and limitations'), link('#/', 'Home')),
+  );
+  return screen;
+}
+
+// ---------------------------------------------------------------- about
+
+export function renderAbout() {
+  return h('section', { class: 'screen about' },
+    screenTitle('About'),
+    h('p', { class: 'notice' }, INDEPENDENCE_NOTICE),
+    h('h2', null, 'How it works'),
+    h('p', null, 'Every puzzle is generated in your browser from a rule specification and a seed, then checked so that exactly one option follows the rule. Explanations, hints and the “why this option is tempting” notes come from the same specification.'),
+    h('h2', null, 'Privacy'),
+    h('p', null, 'No data leaves your browser. There are no accounts, no analytics and no network requests after the page loads. Your attempt history is kept in this browser’s local storage and can be cleared from Settings.'),
+    h('h2', null, 'Limitations'),
+    h('ul', null, LIMITATIONS.map((l) => h('li', null, l))),
+    h('div', { class: 'actions' }, link('#/', 'Home', 'btn btn-primary')),
+  );
+}
+
+export function renderNotFound() {
+  return h('section', { class: 'screen' },
+    screenTitle('Page not found'),
+    h('p', null, 'That link does not match a screen in this app.'),
+    h('div', { class: 'actions' }, link('#/', 'Home', 'btn btn-primary')),
+  );
+}
+
+export function renderError(message) {
+  return h('section', { class: 'screen' },
+    screenTitle('Something went wrong'),
+    h('p', null, message),
+    h('div', { class: 'actions' }, link('#/', 'Home', 'btn btn-primary')),
+  );
+}
+
+export { describeFilter, PRODUCT_NAME };
