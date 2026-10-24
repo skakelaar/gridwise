@@ -1,5 +1,6 @@
-# Matrix Reasoning Trainer
+# Gridwise
 
+**A matrix reasoning trainer.** 
 Independent practice material for abstract matrix reasoning: 3×3 matrices with one missing cell and six answer
 options, procedurally generated in the browser, with explanations, hints, timed sessions, mistake review and
 local progress tracking.

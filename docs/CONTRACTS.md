@@ -52,7 +52,7 @@ Shapes use `currentColor`; hollow fill uses CSS var `--cell-bg` (default white).
 
 ### `src/app/content.js` (owner: learning-experience packet)
 ```js
-export const PRODUCT_NAME = 'Matrix Reasoning Trainer';
+export const PRODUCT_NAME = 'Gridwise';
 export const INDEPENDENCE_NOTICE = '...';   // short, one paragraph, plain text
 export const INTRO_STEPS = [ { title, body /* HTML string, may include <p>, <ul>, <strong> */, example?: { family, difficulty, seed } } ];
 export const PRACTICE_MODES = { guided: {title, blurb}, untimed: {...}, timed: {...}, review: {...} };

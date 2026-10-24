@@ -1,10 +1,10 @@
 // Teaching and product copy for the app. Export shape is fixed by docs/CONTRACTS.md.
 // Plain English, British spelling. Body strings use only <p>, <ul>, <li> and <strong>.
 
-export const PRODUCT_NAME = 'Matrix Reasoning Trainer';
+export const PRODUCT_NAME = 'Gridwise';
 
 export const INDEPENDENCE_NOTICE =
-  'Matrix Reasoning Trainer is independent practice material. Every puzzle is original and procedurally generated. '
+  'Gridwise is independent practice material. Every puzzle is original and procedurally generated. '
   + 'It is not affiliated with, endorsed by or derived from Assessio or the Matrigma test, it does not reproduce '
   + 'Matrigma items, and results here do not predict any official score.';
 

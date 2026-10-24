@@ -22,4 +22,4 @@ http.createServer(async (req, res) => {
     res.writeHead(404, { 'content-type': 'text/plain' });
     res.end('not found');
   }
-}).listen(port, () => console.log(`Matrix Reasoning Trainer at http://localhost:${port}/`));
+}).listen(port, () => console.log(`Gridwise at http://localhost:${port}/`));
