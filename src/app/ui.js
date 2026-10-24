@@ -4,8 +4,9 @@ import { renderCell, renderMatrixPreview } from '../render/svg.js';
 import { FAMILY_IDS, FAMILIES, GROUPS, DIFFICULTY_LABELS } from '../engine/index.js';
 import {
   PRODUCT_NAME, INDEPENDENCE_NOTICE, INTRO_STEPS, PRACTICE_MODES, TIMED_PRESETS,
-  STATS_CAVEAT, PERSONALISATION_NOTE, LIMITATIONS,
+  STATS_CAVEAT, PERSONALISATION_NOTE, LIMITATIONS, CHALLENGE_NOTE,
 } from './content.js';
+import { CHALLENGE_RULE, assessmentText } from './challenge.js';
 import { formatPercent, formatMs, formatClock, SMALL_SAMPLE } from './stats.js';
 import { describeFilter } from './session.js';
 
@@ -102,6 +103,7 @@ export function renderHome({ samplePuzzle }) {
     { href: '#/guided', title: PRACTICE_MODES.guided.title, blurb: PRACTICE_MODES.guided.blurb },
     { href: '#/practice', title: PRACTICE_MODES.untimed.title, blurb: PRACTICE_MODES.untimed.blurb },
     { href: '#/timed', title: PRACTICE_MODES.timed.title, blurb: PRACTICE_MODES.timed.blurb },
+    { href: '#/challenge', title: PRACTICE_MODES.challenge.title, blurb: PRACTICE_MODES.challenge.blurb },
     { href: '#/review', title: PRACTICE_MODES.review.title, blurb: PRACTICE_MODES.review.blurb },
     { href: '#/progress', title: 'Progress', blurb: 'Accuracy and response times by rule group and difficulty.' },
     { href: '#/settings', title: 'Settings and reset', blurb: 'Practice personalisation and clearing local data.' },
@@ -398,7 +400,7 @@ export function renderPuzzleScreen(model, handlers) {
   );
   if (model.showCountdown) {
     head.appendChild(h('div', { class: 'countdown-wrap' },
-      h('p', { class: 'countdown', role: 'timer', id: 'countdown', 'aria-label': 'Time remaining' }, '–:––'),
+      h('p', { class: 'countdown', role: 'timer', id: 'countdown', 'aria-label': model.countdownLabel || 'Time remaining' }, '–:––'),
       h('button', {
         type: 'button', class: 'btn btn-small', id: 'end-early', 'aria-describedby': 'end-early-help',
         onClick: (ev) => {
@@ -433,7 +435,7 @@ export function renderPuzzleScreen(model, handlers) {
   );
   if (!done) {
     const actions = h('div', { class: 'actions' },
-      h('button', { type: 'button', class: 'btn btn-primary', id: 'submit-btn', onClick: handlers.onSubmit }, model.mode === 'timed' ? 'Submit and continue' : 'Check answer'),
+      h('button', { type: 'button', class: 'btn btn-primary', id: 'submit-btn', onClick: handlers.onSubmit }, model.mode === 'timed' || model.mode === 'challenge' ? 'Submit and continue' : 'Check answer'),
       model.canSkip ? h('button', { type: 'button', class: 'btn', onClick: handlers.onSkip }, 'Skip (leave unanswered)') : null,
       model.mode === 'review' ? h('button', { type: 'button', class: 'btn', id: 'reveal-btn', onClick: handlers.onReveal }, 'Reveal solution') : null,
       model.mode === 'untimed' ? h('button', { type: 'button', class: 'btn', onClick: handlers.onNext }, 'Skip to next puzzle') : null,
@@ -679,3 +681,173 @@ export function renderError(message) {
 }
 
 export { describeFilter, PRODUCT_NAME };
+
+
+// ---------------------------------------------------------------- adaptive 12-in-12 challenge
+
+export function renderChallengeSetup({ resumable, history }, handlers) {
+  const past = history.slice().reverse();
+  return h('section', { class: 'screen challenge-setup' },
+    screenTitle('12-in-12 challenge'),
+    h('p', { class: 'lead' }, 'Twelve puzzles, sixty seconds each. The difficulty follows your answers, and at the end you get an assessment, a memorandum of every answer, and a full explanation of each puzzle.'),
+    h('div', { class: 'notice' }, h('p', null, CHALLENGE_NOTE)),
+    h('fieldset', null,
+      h('legend', null, 'How the difficulty moves'),
+      h('p', { class: 'note' }, CHALLENGE_RULE),
+      h('ul', { class: 'note' },
+        h('li', null, 'A puzzle that reaches 0:00 is recorded as timed out and the next one starts automatically.'),
+        h('li', null, 'Every rule group appears twice, in a shuffled order.'),
+        h('li', null, 'Your answers are added to your progress statistics and mistakes to the review list.'),
+      ),
+    ),
+    resumable
+      ? h('div', { class: 'banner' },
+          h('p', null, h('strong', null, 'A challenge is in progress. '), `You are on puzzle ${resumable.index + 1} of ${resumable.items.length}.`),
+          h('div', { class: 'actions' },
+            h('button', { type: 'button', class: 'btn btn-primary', onClick: handlers.onResume }, 'Resume challenge'),
+            h('button', { type: 'button', class: 'btn btn-danger', onClick: handlers.onDiscard }, 'Discard it'),
+          ))
+      : h('div', { class: 'actions' },
+          h('button', { type: 'button', class: 'btn btn-primary btn-lg', onClick: handlers.onStart }, 'Start the challenge'),
+          link('#/', 'Back to home'),
+        ),
+    past.length
+      ? h('section', null,
+          h('h2', null, 'Previous challenges'),
+          h('ul', { class: 'mistake-list' }, past.map((c) => {
+            const correct = c.items.filter((i) => i.correct).length;
+            return h('li', { class: 'mistake challenge-row' },
+              h('div', { class: 'mistake-text' },
+                h('span', { class: 'mistake-title' }, `${correct} / ${c.items.length} correct`),
+                h('span', { class: 'mistake-meta' }, `${formatDate(new Date(c.startedAt).toISOString())} · highest level ${Math.max(...c.items.filter((i) => i.difficulty != null).map((i) => i.difficulty))}`),
+              ),
+              h('div', { class: 'mistake-actions' }, h('a', { class: 'btn btn-small', href: `#/challenge/report/${c.id}` }, 'Open report')),
+            );
+          })))
+      : null,
+  );
+}
+
+function levelTrajectory(levels) {
+  return h('ol', { class: 'trajectory', 'aria-label': 'Difficulty level of each puzzle' },
+    levels.map((l, i) => h('li', { class: 'trajectory-step', style: `--lvl:${l}` },
+      h('span', { class: 'trajectory-bar', 'aria-hidden': 'true' }),
+      h('span', { class: 'trajectory-label' }, h('span', { class: 'visually-hidden' }, `Puzzle ${i + 1}: level `), String(l)),
+    )),
+  );
+}
+
+/** Compact answer key for one puzzle: completed matrix, the six options marked, and the explanation. */
+function answerKey(puzzle, item, index) {
+  if (!puzzle) {
+    return h('details', { class: 'answer-key' },
+      h('summary', null,
+        h('span', { class: 'answer-key-num' }, String(index + 1).padStart(2, '0')),
+        h('span', { class: 'answer-key-title' }, `${GROUPS[item.group]?.label || item.group} · not reached`),
+        h('span', { class: 'result is-unanswered' }, 'Not reached'),
+      ),
+      h('div', { class: 'answer-key-body' }, h('p', { class: 'note-small' }, 'This puzzle was never presented, so there is nothing to explain. Its level would have depended on your previous answer.')),
+    );
+  }
+  const yours = item.chosenIndex;
+  const options = h('div', { class: 'options options-compact' },
+    puzzle.options.map((cell, i) => {
+      const cls = ['option', 'cell', 'is-static'];
+      if (i === puzzle.correctIndex) cls.push('is-correct');
+      if (yours === i && !item.correct) cls.push('is-wrong');
+      const status = i === puzzle.correctIndex ? 'Correct answer' : yours === i ? 'Your answer' : '';
+      return h('div', { class: cls.join(' '), role: 'img', 'aria-label': `Option ${i + 1}: ${puzzle.description.options[i]}${status ? `. ${status}` : ''}` },
+        h('span', { class: 'option-num', 'aria-hidden': 'true' }, String(i + 1)),
+        h('div', { class: 'option-fig', html: renderCell(cell) }),
+        status ? h('span', { class: 'option-status', 'aria-hidden': 'true' }, status) : null,
+      );
+    }),
+  );
+  const result = item.timedOut ? 'Timed out' : item.chosenIndex == null ? 'Not reached' : item.correct ? 'Correct' : 'Incorrect';
+  const resultCls = item.correct ? 'is-correct' : item.chosenIndex == null ? 'is-unanswered' : 'is-wrong';
+  const details = h('details', { class: 'answer-key', open: item.chosenIndex == null || !item.correct ? '' : null },
+    h('summary', null,
+      h('span', { class: 'answer-key-num' }, String(index + 1).padStart(2, '0')),
+      h('span', { class: 'answer-key-title' }, `${puzzle.familyLabel} · level ${puzzle.difficulty}`),
+      h('span', { class: `result ${resultCls}` }, result),
+    ),
+    h('div', { class: 'answer-key-body' },
+      h('div', { class: 'puzzle-layout' },
+        renderMatrix(puzzle, { done: true, idPrefix: `key-${index}` }),
+        h('div', { class: 'options-wrap' }, h('h3', { class: 'options-title' }, 'Options'), options),
+      ),
+      explanationBlock(puzzle, item.correct ? null : item.chosenIndex, null),
+    ),
+  );
+  // `open` must be absent, not "null", for closed items.
+  if (!(item.chosenIndex == null || !item.correct)) details.removeAttribute('open');
+  return details;
+}
+
+export function renderChallengeReport({ challenge, report, puzzles }) {
+  const endedText = { completed: 'All twelve puzzles were presented.', time: 'The twelve minutes ran out.', stopped: 'Ended early.' }[report.endedBy] || '';
+  const memoRows = challenge.items.map((item, i) => {
+    const p = puzzles[i];
+    const result = item.timedOut ? 'Timed out' : item.chosenIndex == null ? 'Not reached' : item.correct ? 'Correct' : 'Incorrect';
+    const cls = item.correct ? 'is-correct' : item.chosenIndex == null ? 'is-unanswered' : 'is-wrong';
+    return h('tr', { class: item.correct ? '' : 'is-miss' },
+      h('td', null, String(i + 1)),
+      h('td', null, `${GROUPS[item.group].label}`, h('br'), h('span', { class: 'mistake-meta' }, FAMILIES[item.family]?.label || item.family)),
+      h('td', null, item.difficulty == null ? '–' : `${item.difficulty} – ${DIFFICULTY_LABELS[item.difficulty]}`),
+      h('td', null, item.chosenIndex == null ? '–' : String(item.chosenIndex + 1)),
+      h('td', null, p ? String(p.correctIndex + 1) : '–'),
+      h('td', null, h('span', { class: `result ${cls}` }, result)),
+      h('td', null, item.chosenIndex == null ? (item.timedOut ? '1:00' : '–') : formatMs(item.ms)),
+      h('td', null, p ? h('a', { href: `#key-${i}` }, 'See', h('span', { class: 'visually-hidden' }, ` explanation for puzzle ${i + 1}`)) : '–'),
+    );
+  });
+  const groupRows = report.groups.map((g) => h('tr', null,
+    h('th', { scope: 'row' }, g.label),
+    h('td', null, String(g.attempted)),
+    h('td', null, `${g.correct} / ${g.attempted}`),
+  ));
+  return h('section', { class: 'screen challenge-report' },
+    screenTitle('Challenge report'),
+    h('p', { class: 'lead' }, `${endedText} ${formatDate(new Date(challenge.startedAt).toISOString())}.`),
+    h('div', { class: 'stat-tiles' },
+      statTile('Score', `${report.correct} / ${report.total}`, `${report.wrong} incorrect · ${report.timedOut} timed out · ${report.notReached} not reached`),
+      statTile('Highest level', report.highest == null ? '–' : `${report.highest}`, report.highest == null ? '' : DIFFICULTY_LABELS[report.highest]),
+      statTile('Average time', report.avgMs == null ? '–' : `${Math.round(report.avgMs / 1000)} s`, 'per answered puzzle (60 s available)'),
+      statTile('Time used', formatMs(report.usedMs), 'of 12 min'),
+    ),
+    h('h2', null, 'Assessment'),
+    h('div', { class: 'assessment' }, assessmentText(report).map((t) => h('p', null, t))),
+    h('h3', null, 'Difficulty path'),
+    levelTrajectory(report.levels),
+    h('p', { class: 'note-small' }, CHALLENGE_RULE),
+    h('div', { class: 'table-wrap' },
+      h('table', { class: 'table stats-table' },
+        h('caption', null, 'By rule group'),
+        h('thead', null, h('tr', null, ['Group', 'Presented', 'Correct'].map((t) => h('th', { scope: 'col' }, t)))),
+        h('tbody', null, groupRows),
+      ),
+    ),
+    h('p', { class: 'note-small caveat' }, CHALLENGE_NOTE),
+    h('h2', null, 'Memorandum'),
+    h('div', { class: 'table-wrap' },
+      h('table', { class: 'table memo' },
+        h('caption', { class: 'visually-hidden' }, 'Answer key for every puzzle'),
+        h('thead', null, h('tr', null, ['#', 'Rule group', 'Level', 'Your answer', 'Correct answer', 'Result', 'Time', 'Explanation'].map((t) => h('th', { scope: 'col' }, t)))),
+        h('tbody', null, memoRows),
+      ),
+    ),
+    h('h2', null, 'Explanations'),
+    h('p', { class: 'note-small' }, 'Incorrect, timed-out and unreached puzzles are expanded; open any other to read its explanation.'),
+    h('div', { class: 'answer-keys' }, challenge.items.map((item, i) => {
+      const wrap = answerKey(puzzles[i], item, i);
+      wrap.id = `key-${i}`;
+      return wrap;
+    })),
+    h('div', { class: 'actions' },
+      link('#/challenge', 'New challenge', 'btn btn-primary'),
+      link('#/review', 'Mistake review'),
+      link('#/progress', 'See progress'),
+      link('#/', 'Home'),
+    ),
+  );
+}

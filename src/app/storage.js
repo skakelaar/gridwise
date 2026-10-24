@@ -10,7 +10,11 @@ export const KEYS = {
   settings: 'settings',   // user settings
   adaptive: 'adaptive',   // practice personalisation state
   timed: 'timed',         // in-progress or last finished timed session
+  challenge: 'challenge', // in-progress adaptive challenge
+  challengeHistory: 'challengeHistory', // finished challenges, newest last (capped)
 };
+
+const MAX_CHALLENGES = 20;
 
 const MAX_ATTEMPTS = 5000;
 
@@ -175,4 +179,34 @@ export function saveTimed(session) {
 
 export function clearTimed() {
   remove(KEYS.timed);
+}
+
+export function loadChallenge() {
+  const c = read(KEYS.challenge, null);
+  return c && typeof c === 'object' && Array.isArray(c.items) ? c : null;
+}
+
+export function saveChallenge(c) {
+  write(KEYS.challenge, c);
+}
+
+export function clearChallenge() {
+  remove(KEYS.challenge);
+}
+
+export function loadChallengeHistory() {
+  const list = read(KEYS.challengeHistory, []);
+  return Array.isArray(list) ? list : [];
+}
+
+/** Store a finished challenge so its report can be reopened later. */
+export function archiveChallenge(c) {
+  const list = loadChallengeHistory().filter((x) => x.id !== c.id);
+  list.push(c);
+  while (list.length > MAX_CHALLENGES) list.shift();
+  write(KEYS.challengeHistory, list);
+}
+
+export function findChallenge(id) {
+  return loadChallengeHistory().find((x) => x.id === id) || null;
 }

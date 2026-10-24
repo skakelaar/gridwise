@@ -55,6 +55,16 @@ Bugs found and fixed during verification: Enter on a selected option re-selected
 skip link's `#app` anchor was treated as a route ("Page not found"); a single Enter on "End session early"
 discarded a session.
 
+## 12-in-12 challenge (added 2026-10-24)
+
+* `tests/challenge.test.js` covers the slot design (every group twice), the staircase bounds (1–4, start at 2),
+  timeouts counting as misses, catch-up of elapsed timeouts after a reload, and the report figures.
+* Browser run-through: start, answer by keyboard, a puzzle left to time out (recorded as timed out, level
+  stepped down, next puzzle started automatically), reload mid-challenge resumed the current puzzle with the
+  right remaining time, "End session early" (two presses) produced the report: assessment text, difficulty path,
+  group table, memorandum with your/correct answers, and an expandable explanation for every puzzle. A crash on
+  unreached puzzles in the report was found this way and fixed.
+
 ## Not verified
 
 * Real screen-reader output (ARIA roles, labels and live regions were checked in the DOM only).

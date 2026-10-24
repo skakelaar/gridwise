@@ -6,6 +6,7 @@ import * as storage from './storage.js';
 import * as session from './session.js';
 import * as ui from './ui.js';
 import { createCountdown } from './timer.js';
+import * as challenge from './challenge.js';
 import { summarise, byGroup, byDifficulty, formatClock } from './stats.js';
 
 const app = document.getElementById('app');
@@ -38,6 +39,7 @@ const ROUTES = {
   progress: showProgress,
   settings: showSettings,
   about: showAbout,
+  challenge: showChallenge,
 };
 
 let teardown = null; // cleanup for the active screen (timers, listeners)
@@ -346,6 +348,125 @@ function showTimedReview(index) {
     nextHref: index < t.items.length - 1 ? `#/timed/summary/${index + 1}` : null,
   };
   mount(ui.renderPuzzleScreen(model, {}), { title: `Review puzzle ${index + 1}` });
+}
+
+// ---------------------------------------------------------------- adaptive 12-in-12 challenge
+
+let chal = null;
+
+function loadChallenge() {
+  if (!chal) chal = storage.loadChallenge();
+  return chal;
+}
+
+function persistChallenge() {
+  if (chal) storage.saveChallenge(chal);
+}
+
+function settleChallenge(c) {
+  // Apply timeouts that elapsed while away; archive if that finished it.
+  if (c && !c.finished && challenge.catchUp(c)) persistChallenge();
+  if (c && c.finished) { storage.archiveChallenge(c); storage.clearChallenge(); chal = null; }
+  return c;
+}
+
+function showChallenge(parts) {
+  const sub = parts[0];
+  if (sub === 'run') return showChallengeRun();
+  if (sub === 'report') return showChallengeReport(parts[1]);
+  const existing = settleChallenge(loadChallenge());
+  const resumable = existing && !existing.finished ? existing : null;
+  mount(ui.renderChallengeSetup({ resumable, history: storage.loadChallengeHistory() }, {
+    onStart: () => { chal = challenge.createChallenge(); persistChallenge(); navigate('#/challenge/run'); },
+    onResume: () => navigate('#/challenge/run'),
+    onDiscard: () => { chal = null; storage.clearChallenge(); showChallenge([]); ui.announce('Challenge discarded.'); },
+  }), { title: '12-in-12 challenge' });
+}
+
+function showChallengeRun() {
+  const c = loadChallenge();
+  if (!c) return navigate('#/challenge', { replace: true });
+  settleChallenge(c);
+  if (c.finished) return navigate(`#/challenge/report/${c.id}`, { replace: true });
+  renderChallengePuzzle(c, { focus: 'title' });
+}
+
+function endChallenge(c, reason) {
+  challenge.finishChallenge(c, reason);
+  persistChallenge();
+  settleChallenge(c);
+  navigate(`#/challenge/report/${c.id}`, { replace: true });
+  ui.announce(reason === 'time' ? 'Time is up. Showing your challenge report.' : 'Challenge finished. Showing your report.');
+}
+
+function renderChallengePuzzle(c, { focus } = {}) {
+  const cur = challenge.challengeCurrent(c);
+  if (!cur) return endChallenge(c, 'completed');
+  const { puzzle } = cur;
+  let selected = null;
+  const advance = (afterText) => {
+    persistChallenge();
+    if (c.finished) return endChallenge(c, 'completed');
+    renderChallengePuzzle(c, { focus: 'title' });
+    ui.announce(`${afterText} Puzzle ${c.index + 1} of ${c.items.length}, level ${c.level}.`);
+  };
+  const handlers = {
+    onSelect: (i) => { selected = i; ui.setSelectedOption(app, selected); },
+    onSubmit: () => {
+      if (selected == null) {
+        const msg = app.querySelector('.submit-msg');
+        if (msg) msg.textContent = 'Choose one of the six options first.';
+        document.getElementById('opt-0')?.focus();
+        return;
+      }
+      const attempt = challenge.challengeAnswer(c, selected);
+      if (attempt) recordAttempt(puzzle, attempt);
+      advance('Answer recorded.');
+    },
+    onStop: () => endChallenge(c, 'stopped'),
+  };
+  const model = {
+    puzzle,
+    mode: 'challenge',
+    heading: '12-in-12 challenge',
+    progress: `Puzzle ${c.index + 1} of ${c.items.length}`,
+    selected,
+    answered: null,
+    revealed: false,
+    showHints: false,
+    showCountdown: true,
+    countdownLabel: 'Time remaining for this puzzle',
+    canSkip: false,
+  };
+  mount(ui.renderPuzzleScreen(model, handlers), { title: `Challenge – puzzle ${c.index + 1}`, focusTitle: focus === 'title' });
+  installNumberKeys(() => ({ select: handlers.onSelect }));
+
+  const clock = document.getElementById('countdown');
+  const countdown = createCountdown({
+    endsAt: challenge.puzzleDeadline(c),
+    announceAt: [10],
+    onTick: (s) => { if (clock) clock.textContent = formatClock(s); },
+    onAnnounce: (mark) => ui.announce(`${mark} seconds remaining for this puzzle.`),
+    onEnd: () => {
+      challenge.challengeTimeout(c);
+      advance('Time ran out for that puzzle; it is recorded as timed out.');
+    },
+  }).start();
+  const prev = teardown;
+  teardown = () => { countdown.stop(); if (prev) prev(); };
+}
+
+function showChallengeReport(id) {
+  let c = id ? storage.findChallenge(id) : null;
+  if (!c) {
+    const live = settleChallenge(loadChallenge());
+    if (live && !live.finished) return navigate('#/challenge/run', { replace: true });
+    const hist = storage.loadChallengeHistory();
+    c = id ? storage.findChallenge(id) : hist[hist.length - 1];
+  }
+  if (!c) return mount(ui.renderError('No challenge report found. Start a challenge to get one.'), { title: 'Challenge report' });
+  const puzzles = c.items.map((item) => (item.difficulty == null ? null : session.puzzleFor(item)));
+  mount(ui.renderChallengeReport({ challenge: c, report: challenge.challengeReport(c), puzzles }), { title: 'Challenge report' });
 }
 
 // ---------------------------------------------------------------- mistake review

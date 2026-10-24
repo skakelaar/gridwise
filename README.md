@@ -50,6 +50,15 @@ docs/VERIFICATION.md  what was verified and known limitations
 
 Puzzle logic never touches the DOM; the app layer only calls `generatePuzzle` and `renderCell`.
 
+## 12-in-12 challenge
+
+`#/challenge`: twelve puzzles, sixty seconds each, every rule group twice in a shuffled order. Difficulty follows
+a stated 1-up/1-down staircase (start at level 2; correct → up one level, incorrect or timeout → down one level,
+within 1–4). The report gives a plain-language assessment, a difficulty path, a memorandum of every answer
+(your answer, the correct answer, result, time) and the full explanation of each puzzle. Finished challenges are
+kept locally so their reports can be reopened. The format is practice only and does not reproduce any
+publisher's adaptive algorithm, item bank, timing, scoring or norms.
+
 ## Difficulty levels
 
 Four structural levels: Basic (one rule), Intermediate (two), Advanced (three, with count arithmetic and
