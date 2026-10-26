@@ -8,12 +8,12 @@ import { puzzleFor, makeAttempt } from './session.js';
 export const CHALLENGE = {
   count: 12,
   secondsPerPuzzle: 60,
-  startLevel: 2,
+  startLevel: 3,
   minLevel: 1,
   maxLevel: MAX_DIFFICULTY,
 };
 
-const STAIRCASE = 'You start at level 2. Each correct answer moves the next question one level up (to a maximum of 6, Grandmaster); each incorrect answer or timeout moves it one level down (to a minimum of 1).';
+const STAIRCASE = 'You start at level 3. Each correct answer moves the next question one level up (to a maximum of 6, Grandmaster); each incorrect answer or timeout moves it one level down (to a minimum of 1).';
 
 export const CHALLENGE_FORMATS = {
   matrix: { id: 'matrix', label: '12 matrices in 12 minutes', count: 12, seconds: 60, blurb: 'Every rule group twice, 60 seconds per puzzle.', rule: `${STAIRCASE} Every puzzle has its own 60-second clock, so the whole challenge lasts at most 12 minutes.` },
@@ -35,11 +35,11 @@ export function createChallenge({ format = 'matrix', now = Date.now(), random = 
   const fmt = CHALLENGE_FORMATS[format] || CHALLENGE_FORMATS.matrix;
   const groups = Object.keys(GROUPS);
   let slots;
+  const cycle = (list, n) => { const out = []; const order = shuffle(list, random); for (let i = 0; i < n; i++) out.push(order[i % order.length]); return out; };
   if (fmt.id === 'mixed') {
-    const extra = shuffle(groups, random).slice(0, 2);
-    slots = shuffle([...groups, ...extra, 'series', 'series', 'logic', 'logic', 'numeric', 'numeric', 'verbal', 'verbal'], random);
+    slots = shuffle([...cycle(groups, 8), 'series', 'series', 'logic', 'logic', 'numeric', 'numeric', 'verbal', 'verbal'], random);
   } else {
-    slots = shuffle([...groups, ...groups], random);
+    slots = shuffle(cycle(groups, fmt.count), random);
   }
   const items = slots.map((group) => {
     const families = [...FAMILY_IDS.filter((id) => FAMILIES[id].group === group), ...ITEM_FAMILY_IDS.filter((id) => ITEM_FAMILIES[id].group === group)];

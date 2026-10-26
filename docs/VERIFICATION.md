@@ -114,6 +114,17 @@ discarded a session.
   the three test formats share a switcher; Results has Progress, Mistakes and Reports tabs; old routes redirect.
   Checked in the browser at desktop and 375 px (no horizontal overflow) after a spacing pass.
 
+## Whole-matrix families, applied problems, recalibration (added 2026-10-26)
+
+* Six whole-matrix families with readings-based solvers; the independent QA solver gained its own path,
+  distribution, multiset, composition and rigid-transformation readings. Two real findings from the sweep were
+  fixed: ordinary figure puzzles could be read as a rigid transformation of another row or column (now checked
+  in the generator), and the "fixed set" reading was too permissive for count-grid puzzles.
+* Applied word problems and 46 sentence-completion items; all answers exact by construction.
+* Calibration: challenge starts at level 3, mock tiers shifted up, mixed practice weighted to levels 3–5,
+  personalisation starts at level 3, optional practice clock with timeouts logged as mistakes.
+* 304 tests pass; matrix QA sweep over 21 families × 6 levels.
+
 ## Not verified
 
 * Real screen-reader output (ARIA roles, labels and live regions were checked in the DOM only).

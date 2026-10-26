@@ -5,13 +5,14 @@ import { Rng } from '../src/engine/rng.js';
 
 const seededRandom = (seed) => { const r = new Rng(seed); return () => r.float(); };
 
-test('challenge has twelve slots covering every rule group twice and starts at level 2', () => {
+test('challenge has twelve slots covering every rule group and starts at level 3', () => {
   const c = createChallenge({ now: 1000, random: seededRandom('a') });
   assert.equal(c.items.length, 12);
   const counts = {};
   for (const i of c.items) counts[i.group] = (counts[i.group] || 0) + 1;
-  assert.deepEqual(Object.values(counts), [2, 2, 2, 2, 2, 2]);
-  assert.equal(c.items[0].difficulty, 2);
+  assert.equal(Object.keys(counts).length, 7, 'every matrix group appears');
+  assert.ok(Object.values(counts).every((n) => n >= 1 && n <= 2));
+  assert.equal(c.items[0].difficulty, 3);
   assert.equal(c.endsAt - c.startedAt, 12 * 60 * 1000);
   assert.equal(puzzleDeadline(c), 1000 + 60 * 1000);
 });
@@ -24,17 +25,16 @@ test('staircase moves one level per answer within 1..4 and timeouts count as mis
     now += 5000;
     challengeAnswer(c, correct ? puzzle.correctIndex : (puzzle.correctIndex + 1) % 6, now);
   };
-  answer(true); assert.equal(c.level, 3);
   answer(true); assert.equal(c.level, 4);
   answer(true); assert.equal(c.level, 5);
   answer(true); assert.equal(c.level, 6);
   answer(true); assert.equal(c.level, 6, 'capped at 6');
   answer(false); assert.equal(c.level, 5);
   now += 60000; challengeTimeout(c, now); assert.equal(c.level, 4);
-  assert.equal(c.items[6].timedOut, true);
+  assert.equal(c.items[5].timedOut, true);
   answer(false); answer(false); answer(false); assert.equal(c.level, 1, 'floored at 1');
   answer(false); assert.equal(c.level, 1);
-  assert.deepEqual(c.items.slice(0, 11).map((i) => i.difficulty), [2, 3, 4, 5, 6, 6, 5, 4, 3, 2, 1]);
+  assert.deepEqual(c.items.slice(0, 11).map((i) => i.difficulty), [3, 4, 5, 6, 6, 5, 4, 3, 2, 1, 1]);
   // finish the rest
   while (!c.finished) answer(true);
   assert.equal(c.endedBy, 'completed');

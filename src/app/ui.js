@@ -162,7 +162,7 @@ export function renderIntro({ examples }) {
 
 // ---------------------------------------------------------------- practice settings bar
 
-export function renderPracticeBar({ settings, adaptive, onFamily, onDifficulty, onHints }) {
+export function renderPracticeBar({ settings, adaptive, onFamily, onDifficulty, onHints, onClock }) {
   const bar = h('form', { class: 'practice-bar', onSubmit: (e) => e.preventDefault() },
     h('div', { class: 'field' },
       h('label', { for: 'family-filter' }, 'Question type'),
@@ -171,6 +171,20 @@ export function renderPracticeBar({ settings, adaptive, onFamily, onDifficulty, 
     h('div', { class: 'field' },
       h('label', { for: 'difficulty-filter' }, settings.personalise ? 'Starting level' : 'Level'),
       difficultySelect({ id: 'difficulty-filter', value: settings.practiceDifficulty, onChange: onDifficulty }),
+    ),
+    h('div', { class: 'field' },
+      h('label', { for: 'clock-select' }, 'Clock'),
+      (() => {
+        const sel = h('select', { id: 'clock-select', class: 'select', onChange: (e) => onClock(e.target.value) },
+          h('option', { value: 'off' }, 'Off (take your time)'),
+          h('option', { value: '90' }, '90 s per question'),
+          h('option', { value: '60' }, '60 s per question'),
+          h('option', { value: '45' }, '45 s per question'),
+          h('option', { value: '30' }, '30 s per question'),
+        );
+        sel.value = settings.practiceClock || 'off';
+        return sel;
+      })(),
     ),
     h('div', { class: 'field field-check' },
       h('span', { class: 'field-label-text', 'aria-hidden': 'true' }, 'Help'),
@@ -364,8 +378,8 @@ function feedbackPanel(model, handlers) {
     title = 'Solution revealed';
     line = `The correct answer is option ${correctNo}.`;
   } else if (answered && answered.chosenIndex == null) {
-    title = 'Not answered';
-    line = `You did not answer this puzzle in time. The correct answer is option ${correctNo}.`;
+    title = answered.timedOut ? 'Time ran out' : 'Not answered';
+    line = `You did not answer in time; it counts as a mistake. The correct answer is option ${correctNo}.`;
   } else if (answered?.correct) {
     title = 'Correct';
     cls += ' is-correct';
@@ -420,7 +434,7 @@ export function renderPuzzleScreen(model, handlers) {
   if (model.showCountdown) {
     head.appendChild(h('div', { class: 'countdown-wrap' },
       h('p', { class: 'countdown', role: 'timer', id: 'countdown', 'aria-label': model.countdownLabel || 'Time remaining' }, '–:––'),
-      h('button', {
+      model.hideEndEarly ? null : h('button', {
         type: 'button', class: 'btn btn-small', id: 'end-early', 'aria-describedby': 'end-early-help',
         onClick: (ev) => {
           // Two presses are needed so a stray Enter cannot discard a session.
@@ -439,7 +453,7 @@ export function renderPuzzleScreen(model, handlers) {
           }, { once: true });
         },
       }, 'End session early'),
-      h('span', { id: 'end-early-help', class: 'visually-hidden', 'aria-live': 'polite' }),
+      model.hideEndEarly ? null : h('span', { id: 'end-early-help', class: 'visually-hidden', 'aria-live': 'polite' }),
     ));
   }
   root.appendChild(head);

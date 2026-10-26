@@ -53,7 +53,7 @@ export function chooseSpec({ filter, difficulty, personalise, attempts = [], ada
   }
   let level;
   if (personalise && adaptive) level = adaptive.level;
-  else if (difficulty === 'mixed' || difficulty == null) level = 1 + Math.floor(random() * 6);
+  else if (difficulty === 'mixed' || difficulty == null) level = [2, 3, 3, 4, 4, 5, 5, 6][Math.floor(random() * 8)]; // mixed leans on the middle and upper levels
   else level = Number(difficulty);
   level = Math.min(6, Math.max(1, level || 1));
   return { family, difficulty: level, seed: randomSeed() };

@@ -127,6 +127,7 @@ export const PERSONALISATION_NOTE =
   + 'answers at the current level and goes down one level after two consecutive mistakes. Nothing else influences the choice.';
 
 export const LIMITATIONS = [
+  'Scores here are not comparable with other trainers or tests: question banks, time limits and distractor styles differ. If another trainer feels harder, use a higher level, the practice clock, or the Master mock tier.',
   'Number series, logical deduction, arithmetic and analogy questions are original and generated from a small set of templates and a curated English word bank; they are practice in those formats, not a reconstruction of any published test\'s items.',
   'The 12-in-12 challenge uses a simple, stated up-and-down difficulty rule; it is not the adaptive procedure of any published test and its report is not an official or comparable score.',
   'Levels 4 to 6 (Expert, Master, Grandmaster) stack more simultaneous rules, add inner shapes, count arithmetic, complement and two-way set operations, attributes tied to other attributes, two-level number series, three-premise logic and an advanced vocabulary band; they are harder by construction, not by any measured norm. Non-matrix questions share their hardest forms between levels 5 and 6.',

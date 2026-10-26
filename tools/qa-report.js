@@ -115,6 +115,14 @@ export function majorityPick(p) {
     const winners = score.map((s, i) => (s === best ? i : -1)).filter((i) => i >= 0);
     return winners.length === 1 ? winners[0] : -1;
   }
+  if (p.options[0].kind !== 'figure') {
+    // whole-matrix cells: majority over the canonical cell key
+    const keys = p.options.map(cellKey);
+    const score = keys.map((k) => keys.filter((x) => x === k).length);
+    const best = Math.max(...score);
+    const winners = score.map((s, i) => (s === best ? i : -1)).filter((i) => i >= 0);
+    return winners.length === 1 ? winners[0] : -1;
+  }
   const key = (o, a) => (a === 'rot' || a === 'flip' ? `${canonicalOrientation(o.shape, o.rot, o.flip).r},${canonicalOrientation(o.shape, o.rot, o.flip).f}` : String(o[a]));
   const score = p.options.map((o) => FIG_ATTRS.reduce((s, a) => s + p.options.filter((x) => key(x, a) === key(o, a)).length, 0));
   const best = Math.max(...score);
@@ -180,7 +188,7 @@ for (const family of FAMILY_IDS) {
       for (let i = 0; i < 6; i++) for (let j = i + 1; j < 6; j++) if (svgs[i] === svgs[j]) svgDupes.push(`${p.id}: options ${i} and ${j}`);
 
       // (b) explanation text vs cell values
-      if (p.kind === 'figure') checkFigureText(p, textIssues); else checkSetText(p, textIssues);
+      if (p.kind === 'figure') checkFigureText(p, textIssues); else if (p.kind === 'set') checkSetText(p, textIssues);
 
       // (c) distractor equal to a matrix cell other than 7, 5, 4; and copy codes point at the right cell
       const matrixKeys = p.cells.slice(0, 8).map(cellKey);

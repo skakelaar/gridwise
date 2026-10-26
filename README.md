@@ -51,6 +51,13 @@ docs/VERIFICATION.md  what was verified and known limitations
 
 Puzzle logic never touches the DOM; the app layer only calls `generatePuzzle` and `renderCell`.
 
+## Whole-matrix puzzles and applied problems
+
+Six matrix families run over the whole matrix rather than along rows and columns: snake and spiral counts,
+"three of each" divided boxes, a fixed set hidden in noise, column sets, count-plus-composition, and mirrored
+rows. Applied word problems (journeys, reverse percentages, clock hands, work rates, averages, ages) and
+sentence completion join the non-matrix bank. See `docs/RULES.md`.
+
 ## Other question types
 
 Besides matrices, Gridwise generates number series, logical deduction (syllogisms and ordering problems),

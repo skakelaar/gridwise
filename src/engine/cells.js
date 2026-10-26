@@ -1,5 +1,6 @@
 // Cell model, attribute domains and canonical keys.
 import { canonicalOrientation, SET_PALETTES } from './shapes.js';
+import { globalCellKey } from './global.js';
 
 // Attribute domains for figure cells. Rule values are always indices into `values`.
 export function makeDomains(shapeSet, innerSet = ['none']) {
@@ -32,6 +33,7 @@ export function setCell(palette, members) {
 // Canonical key: equal keys ⇔ visually identical cells.
 export function cellKey(cell) {
   if (cell.kind === 'set') return `set|${cell.palette}|${cell.members.join(',')}`;
+  if (cell.kind === 'scatter' || cell.kind === 'multi' || cell.kind === 'split') return globalCellKey(cell);
   const o = canonicalOrientation(cell.shape, cell.rot, cell.flip);
   const pos = cell.count === 1 ? `${cell.x},${cell.y}` : 'layout';
   const inner = !cell.inner || cell.inner === 'none' ? '-' : `${cell.inner},${cell.innerFill}`;

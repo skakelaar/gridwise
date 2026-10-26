@@ -8,12 +8,14 @@ import { buildLogic } from './logic.js';
 import { buildNumeric } from './numeric.js';
 import { buildAnalogy } from './analogy.js';
 import { buildVocab } from './vocab.js';
+import { buildWord } from './word.js';
 import { markupToPlain } from './markup.js';
 
 export const ITEM_GROUPS = {
   series: { label: 'Number series' },
   logic: { label: 'Logical deduction' },
   numeric: { label: 'Fractions and arithmetic' },
+  applied: { label: 'Applied problems' },
   verbal: { label: 'Verbal reasoning' },
 };
 
@@ -23,6 +25,7 @@ export const ITEM_FAMILIES = {
   numeric: { group: 'numeric', label: 'Fractions and arithmetic', kind: 'item', build: buildNumeric },
   analogy: { group: 'verbal', label: 'Verbal analogies', kind: 'item', build: buildAnalogy },
   vocab: { group: 'verbal', label: 'Vocabulary', kind: 'item', build: buildVocab },
+  word: { group: 'applied', label: 'Word problems', kind: 'item', build: buildWord },
 };
 export const ITEM_FAMILY_IDS = Object.keys(ITEM_FAMILIES);
 

@@ -7,6 +7,8 @@ import { makeRule, wrapValue, RULE_TYPES_BY_KIND } from './rules.js';
 import { predictAttribute, predictSet } from './solver.js';
 import { explainFigurePuzzle, figureHints, explainSetPuzzle, setHints, OP_TEXT } from './explain.js';
 import { describeCell, valueName, ATTR_LABEL, listNames } from './text.js';
+import { GLOBAL_BUILDERS } from './global.js';
+import { compose, canonicalOrientation } from './shapes.js';
 
 export const GROUPS = {
   orientation: { label: 'Rotation and reflection' },
@@ -15,6 +17,7 @@ export const GROUPS = {
   arithmetic: { label: 'Addition and subtraction' },
   set: { label: 'Union, intersection and exclusive-or' },
   combination: { label: 'Combined rules' },
+  global: { label: 'Whole-matrix patterns' },
 };
 
 export const FAMILIES = {
@@ -33,6 +36,12 @@ export const FAMILIES = {
   xor:          { group: 'set', label: 'Exclusive-or', kind: 'set', op: 'xor' },
   neither:      { group: 'set', label: 'Neither (complement)', kind: 'set', op: 'neither' },
   combination:  { group: 'combination', label: 'Combination', kind: 'figure', core: null },
+  path:         { group: 'global', label: 'Snake and spiral counts', kind: 'global', build: 'path' },
+  split:        { group: 'global', label: 'Three of each (divided boxes)', kind: 'global', build: 'split' },
+  invariant:    { group: 'global', label: 'Fixed set with noise', kind: 'global', build: 'invariant' },
+  columnSet:    { group: 'global', label: 'Column sets', kind: 'global', build: 'columnSet' },
+  composition:  { group: 'global', label: 'Count and composition', kind: 'global', build: 'composition' },
+  mirrorRows:   { group: 'orientation', label: 'Mirrored rows', kind: 'global', build: 'mirrorRows' },
 };
 
 export const DIFFICULTY_LABELS = { 1: 'Basic', 2: 'Intermediate', 3: 'Advanced', 4: 'Expert', 5: 'Master', 6: 'Grandmaster' };
@@ -50,7 +59,9 @@ export function generatePuzzle({ family, difficulty = 1, seed }) {
     const rng = new Rng(`${family}|${difficulty}|${seed}|${attempt}`);
     const built = fam.kind === 'set'
       ? buildSetPuzzle(family, fam, difficulty, rng)
-      : buildFigurePuzzle(family, fam, difficulty, rng);
+      : fam.kind === 'global'
+        ? buildGlobalPuzzle(fam, difficulty, rng)
+        : buildFigurePuzzle(family, fam, difficulty, rng);
     if (built) {
       built.id = `${family}-${difficulty}-${seed}`;
       built.seed = seed;
@@ -189,6 +200,9 @@ function buildFigurePuzzle(family, fam, difficulty, rng) {
     cells.push(figureCell(attrs));
   }
   const answer = cells[8];
+  // Rigid-transformation readings (row 3 = T(row 1 or 2), column 3 = T(column 1 or 2)) must not predict a
+  // different orientation for the gap.
+  if (orientationActive && transformConflict(cells)) return null;
   // Verify uniqueness within the grammar, attribute by attribute.
   const verification = { attributes: {} };
   const predsByAttr = {};
@@ -599,6 +613,41 @@ function buildSetOptions(op, orientation, palette, grid, cells, rng, difficulty 
   for (const c of [...pool.slice(1), ...random]) { if (chosen.length >= 5) break; take(c); }
   if (chosen.length < 5) return null;
   return assembleOptions(answer, chosen, rng);
+}
+
+const RIGID = { flipV: { r: 4, f: 1 }, flipH: { r: 0, f: 1 }, rot180: { r: 4, f: 0 }, rot90: { r: 2, f: 0 }, rot270: { r: 6, f: 0 } };
+function transformConflict(cells) {
+  const at = (r, c) => cells[r * 3 + c];
+  const canon = (c) => canonicalOrientation(c.shape, c.rot, c.flip);
+  const apply = (g, c) => { const s = compose(g, { r: c.rot, f: c.flip }); return canonicalOrientation(c.shape, s.r, s.f); };
+  const eq = (a, b) => a.r === b.r && a.f === b.f;
+  const target = canon(at(2, 2));
+  for (const g of Object.values(RIGID)) {
+    for (const src of [0, 1]) {
+      if ([0, 1].every((c) => at(src, c).shape === at(2, c).shape && eq(apply(g, at(src, c)), canon(at(2, c)))) && at(src, 2).shape === at(2, 2).shape && !eq(apply(g, at(src, 2)), target)) return true;
+      if ([0, 1].every((r) => at(r, src).shape === at(r, 2).shape && eq(apply(g, at(r, src)), canon(at(r, 2)))) && at(2, src).shape === at(2, 2).shape && !eq(apply(g, at(2, src)), target)) return true;
+    }
+  }
+  return false;
+}
+
+// ---------------------------------------------------------------- whole-matrix puzzles
+
+function buildGlobalPuzzle(fam, difficulty, rng) {
+  const built = GLOBAL_BUILDERS[fam.build](difficulty, rng);
+  if (!built) return null;
+  return finish({
+    kind: 'global',
+    rules: [],
+    cells: built.cells,
+    options: built.options,
+    correctIndex: built.correctIndex,
+    distractors: built.distractors,
+    explanation: built.explanation,
+    hints: built.hints,
+    verification: { reading: built.features.rule },
+    features: { ruleCount: 1, rules: [built.features.rule], ...built.features, global: true },
+  });
 }
 
 // ---------------------------------------------------------------- shared finishing

@@ -5,10 +5,10 @@ import { randomSeed, GROUPS, FAMILIES, FAMILY_IDS, ITEM_FAMILIES, ITEM_FAMILY_ID
 import { puzzleFor, makeAttempt } from './session.js';
 
 export const MOCK_TIERS = {
-  standard: { id: 'standard', label: 'Standard (levels 1–2)', levels: [1, 2] },
-  higher: { id: 'higher', label: 'Higher (levels 3–4)', levels: [3, 4] },
+  standard: { id: 'standard', label: 'Standard (levels 2–3)', levels: [2, 3] },
+  higher: { id: 'higher', label: 'Higher (levels 4–5)', levels: [4, 5] },
   master: { id: 'master', label: 'Master (levels 5–6)', levels: [5, 6] },
-  mixed: { id: 'mixed', label: 'Mixed (levels 1–6)', levels: [1, 2, 3, 4, 5, 6] },
+  mixed: { id: 'mixed', label: 'Mixed (levels 2–6)', levels: [2, 3, 4, 5, 6] },
 };
 export const MOCK_DEFAULTS = { count: 16, minutes: 8, tier: 'mixed' };
 

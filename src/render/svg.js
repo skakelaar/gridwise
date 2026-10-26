@@ -1,6 +1,7 @@
 // SVG rendering of puzzle cells. Pure functions returning SVG markup strings; no DOM dependency.
 // Shapes are drawn in a 100×100 viewBox using currentColor, so they follow the page's text colour.
 import { SET_PALETTES } from '../engine/shapes.js';
+import { SPLIT_VARIANTS } from '../engine/global.js';
 
 let uid = 0;
 
@@ -51,7 +52,11 @@ const POS = [24, 50, 76];
 export function renderCell(cell, opts = {}) {
   const { size = 100, label = '', className = 'cell-svg' } = opts;
   const id = `mrt${++uid}`;
-  const body = cell.kind === 'set' ? renderSet(cell) : renderFigure(cell, id);
+  const body = cell.kind === 'set' ? renderSet(cell)
+    : cell.kind === 'scatter' ? renderScatter(cell)
+    : cell.kind === 'multi' ? renderMulti(cell)
+    : cell.kind === 'split' ? renderSplit(cell)
+    : renderFigure(cell, id);
   const hasInner = cell.kind === 'figure' && cell.inner && cell.inner !== 'none' && cell.count === 1;
   const defs = cell.kind === 'figure' && (cell.fill === 'hatched' || (hasInner && cell.innerFill === 'hatched'))
     ? `<defs><pattern id="${id}-h" patternUnits="userSpaceOnUse" width="7" height="7" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="7" stroke="currentColor" stroke-width="2.4"/></pattern></defs>`
@@ -107,6 +112,35 @@ function renderSet(cell) {
     const cy = POS[Math.floor(i / 3)];
     out += `<circle cx="${cx}" cy="${cy}" r="8"/>`;
   });
+  return out + '</g>';
+}
+
+function renderScatter(cell) {
+  let out = '<g fill="currentColor" stroke="currentColor" stroke-width="3" stroke-linecap="round">';
+  for (const [x, y] of cell.points) {
+    if (cell.marker === 'dot') out += `<circle cx="${x}" cy="${y}" r="5" stroke="none"/>`;
+    else if (cell.marker === 'ring') out += `<circle cx="${x}" cy="${y}" r="5.5" fill="var(--cell-bg,#fff)"/>`;
+    else if (cell.marker === 'square') out += `<rect x="${x - 5}" y="${y - 5}" width="10" height="10" stroke="none"/>`;
+    else out += `<path d="M${x - 5},${y - 5} L${x + 5},${y + 5} M${x - 5},${y + 5} L${x + 5},${y - 5}" fill="none"/>`;
+  }
+  return out + '</g>';
+}
+
+function renderMulti(cell) {
+  let out = '';
+  cell.items.forEach((it, i) => {
+    const [x, y] = cell.points[i] || [50, 50];
+    const fill = it.fill === 'solid' ? 'currentColor' : 'var(--cell-bg,#fff)';
+    out += `<g transform="translate(${x} ${y}) scale(0.3)" fill="${fill}" stroke="currentColor" stroke-width="8" stroke-linejoin="round">${SHAPE_PATHS[it.shape] || SHAPE_PATHS.circle}</g>`;
+  });
+  return out;
+}
+
+function renderSplit(cell) {
+  const v = (SPLIT_VARIANTS[cell.sections] || []).find((x) => x.id === cell.variant);
+  let out = '<rect x="10" y="10" width="80" height="80" fill="var(--cell-bg,#fff)" stroke="currentColor" stroke-width="3"/>';
+  out += '<g stroke="currentColor" stroke-width="3" stroke-linecap="round">';
+  for (const [x1, y1, x2, y2] of (v ? v.lines : [])) out += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
   return out + '</g>';
 }
 

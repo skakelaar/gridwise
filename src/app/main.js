@@ -168,6 +168,7 @@ function renderPractice(mode, s, { focus } = {}) {
       if (v !== 'mixed') storage.saveAdaptive({ ...storage.DEFAULT_ADAPTIVE, level: Number(v) });
       restart();
     },
+    onClock: (v) => { storage.saveSettings({ practiceClock: v }); restart(); },
     onHints: (on) => {
       // Keep the current puzzle; just switch the help on or off.
       storage.saveSettings({ practiceHints: !!on });
@@ -206,6 +207,8 @@ function renderPractice(mode, s, { focus } = {}) {
     },
     onNext: restart,
   };
+  const clockSecs = Number(settings.practiceClock) || 0;
+  const clockOn = clockSecs > 0 && !s.answered && !s.revealed;
   const model = {
     puzzle: s.puzzle,
     mode,
@@ -215,9 +218,34 @@ function renderPractice(mode, s, { focus } = {}) {
     revealed: s.revealed,
     hintsUsed: s.hintsUsed,
     showHints: mode === 'guided',
+    showCountdown: clockOn,
+    hideEndEarly: true,
+    countdownLabel: 'Time remaining for this question',
     bar,
   };
   mount(ui.renderPuzzleScreen(model, handlers), { title: model.heading, focusTitle: focus === 'title' });
+  if (clockOn) {
+    if (!s.deadline) s.deadline = s.startedAt + clockSecs * 1000;
+    const clock = document.getElementById('countdown');
+    const countdown = createCountdown({
+      endsAt: s.deadline,
+      announceAt: [10],
+      onTick: (sec) => { if (clock) clock.textContent = formatClock(sec); },
+      onAnnounce: (mark) => ui.announce(`${mark} seconds remaining.`),
+      onEnd: () => {
+        if (s.answered || s.revealed) return;
+        const now = Date.now();
+        s.answered = { chosenIndex: null, correct: false, ms: clockSecs * 1000, timedOut: true };
+        storage.appendAttempt(session.makeAttempt(s.puzzle, { chosenIndex: -1, correct: false, ms: clockSecs * 1000, hintsUsed: s.hintsUsed, mode: s.mode, at: now }));
+        storage.upsertMistake(session.makeMistake(s.puzzle, { chosenIndex: null, at: now, mode: s.mode }));
+        if (settings.personalise) storage.saveAdaptive(session.updateAdaptive(adaptive, false));
+        renderPractice(mode, s, { focus: 'feedback' });
+        ui.announce('Time ran out. This counts as a mistake; the explanation is shown.');
+      },
+    }).start();
+    const prev = teardown;
+    teardown = () => { countdown.stop(); if (prev) prev(); };
+  }
   if (focus === 'feedback') ui.focusEl(document.getElementById('feedback-title'));
   if (focus === 'hint') ui.focusEl(document.getElementById('hint-btn') || document.getElementById('reveal-btn'));
   if (focus === 'hints') ui.focusEl(document.getElementById('hints-toggle'));

@@ -22,6 +22,7 @@ const MAX_ATTEMPTS = 5000;
 
 export const DEFAULT_SETTINGS = {
   practiceHints: true,
+  practiceClock: 'off',
   testFormat: 'mock',
   personalise: false,
   practiceFamily: 'all',       // 'all' | 'group:<id>' | '<familyId>'
@@ -32,7 +33,7 @@ export const DEFAULT_SETTINGS = {
   timedDifficulty: 'mixed',
 };
 
-export const DEFAULT_ADAPTIVE = { level: 1, correctStreak: 0, wrongStreak: 0 };
+export const DEFAULT_ADAPTIVE = { level: 3, correctStreak: 0, wrongStreak: 0 };
 
 export function storageAvailable() {
   try {

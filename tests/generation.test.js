@@ -48,6 +48,9 @@ for (const family of FAMILY_IDS) {
           // for which only the answer's value is predicted (true by construction when predictions are unique).
           assert.ok(p.rules.filter((r) => r.type !== 'const').length === p.features.ruleCount);
           assert.ok(p.features.ruleCount >= (family === 'combination' ? 2 : difficulty) || family !== 'combination');
+        } else if (p.kind === 'global') {
+          assert.ok(p.features.rule, 'global reading recorded');
+          assert.ok(p.cells.every((c) => ['scatter', 'multi', 'split', 'figure'].includes(c.kind)));
         } else {
           const grid = [[], [], []];
           p.cells.forEach((c, i) => { grid[Math.floor(i / 3)][i % 3] = c.members; });
@@ -81,6 +84,7 @@ for (const family of FAMILY_IDS) {
 
 test('difficulty follows documented structural features', () => {
   for (const family of FAMILY_IDS) {
+    if (FAMILIES[family].kind === 'global') continue;
     if (FAMILIES[family].kind === 'set') {
       for (const seed of seeds.slice(0, 20)) {
         const p1 = generatePuzzle({ family, difficulty: 1, seed });
@@ -111,7 +115,7 @@ test('difficulty follows documented structural features', () => {
 test('inner shapes and count arithmetic only appear from level 3 and stay well-formed', () => {
   let inner = 0, arith = 0;
   for (const family of FAMILY_IDS) {
-    if (FAMILIES[family].kind === 'set') continue;
+    if (FAMILIES[family].kind !== 'figure') continue;
     for (const d of [1, 2, 3, 4, 5, 6]) for (const seed of seeds.slice(0, 40)) {
       const p = generatePuzzle({ family, difficulty: d, seed });
       if (p.features.inner) inner++;

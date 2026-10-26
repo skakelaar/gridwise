@@ -1,5 +1,6 @@
 // Human-readable names for attribute values and cells. Shared by explanations, hints and accessibility text.
 import { SHAPES, SET_PALETTES } from './shapes.js';
+import { describeGlobalCell } from './global.js';
 
 // Full name of one attribute value, e.g. "striped", "3 shapes", "rotated 90° clockwise".
 export function valueName(attr, value) {
@@ -44,6 +45,7 @@ export function listNames(items) {
 
 // Short spoken description of a cell, e.g. "2 medium striped flags, rotated 90° clockwise".
 export function describeCell(cell) {
+  if (cell.kind === 'scatter' || cell.kind === 'multi' || cell.kind === 'split') return describeGlobalCell(cell);
   if (cell.kind === 'set') {
     const pal = SET_PALETTES[cell.palette];
     if (cell.members.length === 0) return 'empty cell';

@@ -217,11 +217,31 @@ function completedGrid(values, option) {
   return [all.slice(0, 3), all.slice(3, 6), all.slice(6, 9)];
 }
 
+/** Row-3 (or column-3) as a rigid transformation of row 1 or 2 (or column 1 or 2) over the completed grid. */
+function transformReadings(cells, option) {
+  const all = [...cells.slice(0, 8), option];
+  const T = { flipV: { r: 4, f: 1 }, flipH: { r: 0, f: 1 }, rot180: { r: 4, f: 0 }, rot90: { r: 2, f: 0 }, rot270: { r: 6, f: 0 } };
+  const st = (c) => canonicalOrientation(c.shape, c.rot, c.flip);
+  const eq = (a, b) => a.r === b.r && a.f === b.f;
+  const comp = (g, s) => ({ r: (((g.r + (g.f ? -s.r : s.r)) % 8) + 8) % 8, f: g.f ^ s.f });
+  const apply = (g, c) => { const s = comp(g, { r: c.rot, f: c.flip }); return canonicalOrientation(c.shape, s.r, s.f); };
+  const at = (r, c) => all[r * 3 + c];
+  const out = [];
+  for (const [name, g] of Object.entries(T)) {
+    for (const src of [0, 1]) {
+      if ([0, 1, 2].every((c) => at(src, c).shape === at(2, c).shape && eq(apply(g, at(src, c)), st(at(2, c))))) out.push(`row3=${name}(row${src + 1})`);
+      if ([0, 1, 2].every((r) => at(r, src).shape === at(r, 2).shape && eq(apply(g, at(r, src)), st(at(r, 2))))) out.push(`col3=${name}(col${src + 1})`);
+    }
+  }
+  return out;
+}
+
 function evaluateFigureOption(cells, option) {
   const obs = cells.slice(0, 8).map(observeFigure);
   const opt = observeFigure(option);
   const attrs = {};
   let strongAttrs = 0, anyAttrs = 0, total = 0;
+  const transforms = transformReadings(cells, option);
   const grids = {};
   for (const attr of FIGURE_ATTRS) grids[attr] = completedGrid(obs.map((o) => o[attr]), opt[attr]);
   // Independent readings first; a coupled reading may only lean on an attribute that stands on its own.
@@ -246,6 +266,7 @@ function evaluateFigureOption(cells, option) {
         if (ok && map.size >= 2 && aGap !== null && bGap !== null && map.has(aGap) && map.get(aGap) === bGap) pats.push({ name: `coupled:${other}`, strong: true });
       }
     }
+    if ((attr === 'rot' || attr === 'flip') && transforms.length) for (const t of transforms) pats.push({ name: t, strong: true });
     attrs[attr] = pats;
     if (pats.some((p) => p.strong)) strongAttrs++;
     if (pats.length) anyAttrs++;
@@ -253,6 +274,89 @@ function evaluateFigureOption(cells, option) {
   }
   const n = FIGURE_ATTRS.length;
   return { attrs, level: strongAttrs === n ? 'strong' : anyAttrs === n ? 'weak' : 'none', score: [strongAttrs, anyAttrs, total] };
+}
+
+// ---------------------------------------------------------------- whole-matrix readings (independent of global.js)
+
+const QA_PATHS = {
+  rowMajor: [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2], [2, 0], [2, 1], [2, 2]],
+  snake: [[0, 0], [0, 1], [0, 2], [1, 2], [1, 1], [1, 0], [2, 0], [2, 1], [2, 2]],
+  colMajor: [[0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1], [0, 2], [1, 2], [2, 2]],
+  colSnake: [[0, 0], [1, 0], [2, 0], [2, 1], [1, 1], [0, 1], [0, 2], [1, 2], [2, 2]],
+  spiral: [[0, 0], [0, 1], [0, 2], [1, 2], [2, 2], [2, 1], [2, 0], [1, 0], [1, 1]],
+  spiralCcw: [[0, 0], [1, 0], [2, 0], [2, 1], [2, 2], [1, 2], [0, 2], [0, 1], [1, 1]],
+};
+
+function countsOf(items) { const m = new Map(); for (const it of items) { const k = `${it.shape}/${it.fill}`; m.set(k, (m.get(k) || 0) + 1); } return m; }
+const sameCounts = (a, b) => a.size === b.size && [...a].every(([k, v]) => b.get(k) === v);
+
+function evaluateGlobalOption(cells, option) {
+  const all = [...cells.slice(0, 8), option];
+  const pats = [];
+  const add = (name, strong = true) => pats.push({ name, strong });
+  const kind = option.kind;
+  if (kind === 'scatter') {
+    // counts along a path with a constant step or two alternating steps (full 9-sequence check)
+    const grid = [all.slice(0, 3), all.slice(3, 6), all.slice(6, 9)].map((row) => row.map((c) => c.count));
+    for (const [name, path] of Object.entries(QA_PATHS)) {
+      const seq = path.map(([r, c]) => grid[r][c]);
+      const d = seq.slice(1).map((v, i) => v - seq[i]);
+      if (d.every((x) => x === d[0]) && d[0] !== 0) add(`${name}:step`);
+      const even = d.filter((_, i) => i % 2 === 0), odd = d.filter((_, i) => i % 2 === 1);
+      if (even.every((x) => x === even[0]) && odd.every((x) => x === odd[0]) && even[0] !== odd[0] && even[0] !== 0 && odd[0] !== 0) add(`${name}:alternating`);
+    }
+    if (all.every((c) => c.count === all[0].count)) add('const');
+  } else if (kind === 'split') {
+    const tally = new Map();
+    for (const c of all) tally.set(c.sections, (tally.get(c.sections) || 0) + 1);
+    if ([...tally.values()].every((n) => n === 3)) add('three-of-each');
+    if (all.every((c) => c.sections === all[0].sections)) add('const');
+  } else if (kind === 'multi') {
+    const counts = all.map((c) => countsOf(c.items));
+    // invariant core: types with identical counts in all nine cells, and at least one such type
+    const core = [...counts[0].keys()].filter((k) => counts.every((m) => m.get(k) === counts[0].get(k)));
+    const optionCore = core.length > 0;
+    // the option must not break any type that is invariant over the eight known cells
+    const known = counts.slice(0, 8);
+    const knownCore = [...known[0].keys()].filter((k) => known.every((m) => m.get(k) === known[0].get(k)));
+    // A fixed set is a strong reading only when the item counts of the known cells show no row/column grid
+    // (when they do, the stricter composition reading applies and "keeps the core" is just a weak sanity check).
+    const knownSizes = cells.slice(0, 8).map((c) => c.items.length);
+    const ka = knownSizes[3] - knownSizes[0], kb = knownSizes[1] - knownSizes[0];
+    const knownGrid = (ka !== 0 || kb !== 0) && [0, 1, 2, 3, 4, 5, 6, 7].every((i) => knownSizes[i] === knownSizes[0] + Math.floor(i / 3) * ka + (i % 3) * kb);
+    if (knownCore.length && knownCore.every((k) => counts[8].get(k) === known[0].get(k)) && optionCore) add('invariant-core', !knownGrid);
+    // column-constant multisets
+    if ([0, 1, 2].every((c) => sameCounts(counts[c], counts[c + 3]) && sameCounts(counts[c], counts[c + 6]))) add('column-multiset');
+    if ([0, 1, 2].every((r) => sameCounts(counts[r * 3], counts[r * 3 + 1]) && sameCounts(counts[r * 3], counts[r * 3 + 2]))) add('row-multiset');
+    // nested composition: cells with n items show the first n of one chain, and counts form a grid
+    const sizes = all.map((c) => c.items.length);
+    const byN = new Map();
+    let nested = true;
+    for (let i = 0; i < 9 && nested; i++) { const key = [...countsOf(all[i].items).keys()].sort().join('|'); if (byN.has(sizes[i]) && byN.get(sizes[i]) !== key) nested = false; byN.set(sizes[i], key); }
+    if (nested) {
+      const ns = [...byN.keys()].sort((a, b) => a - b);
+      const chainOk = ns.every((n, i) => i === 0 || byN.get(ns[i - 1]).split('|').every((k) => byN.get(n).split('|').includes(k)));
+      const g = [sizes.slice(0, 3), sizes.slice(3, 6), sizes.slice(6, 9)];
+      const a = g[1][0] - g[0][0], b = g[0][1] - g[0][0];
+      const gridOk = g.every((row, r) => row.every((v, c) => v === g[0][0] + r * a + c * b));
+      if (chainOk && gridOk && (a !== 0 || b !== 0)) add('composition-grid');
+    }
+  } else if (kind === 'figure') {
+    // mirrored / transformed rows and columns
+    const T = { flipV: { r: 4, f: 1 }, flipH: { r: 0, f: 1 }, rot180: { r: 4, f: 0 }, rot90: { r: 2, f: 0 }, rot270: { r: 6, f: 0 } };
+    const st = (c) => canonicalOrientation(c.shape, c.rot, c.flip);
+    const eq = (a, b) => a.r === b.r && a.f === b.f;
+    const comp = (g, s) => ({ r: (((g.r + (g.f ? -s.r : s.r)) % 8) + 8) % 8, f: g.f ^ s.f });
+    const apply = (g, c) => { const s = comp(g, { r: c.rot, f: c.flip }); return canonicalOrientation(c.shape, s.r, s.f); };
+    const at = (r, c) => all[r * 3 + c];
+    for (const [name, g] of Object.entries(T)) {
+      for (const src of [0, 1]) {
+        if ([0, 1, 2].every((c) => eq(apply(g, at(src, c)), st(at(2, c))))) add(`row3=${name}(row${src + 1})`);
+        if ([0, 1, 2].every((r) => eq(apply(g, at(r, src)), st(at(r, 2))))) add(`col3=${name}(col${src + 1})`);
+      }
+    }
+  }
+  return { attrs: { global: pats }, level: pats.some((p) => p.strong) ? 'strong' : pats.length ? 'weak' : 'none', score: [pats.some((p) => p.strong) ? 1 : 0, pats.length ? 1 : 0, pats.length] };
 }
 
 function evaluateSetOption(cells, option) {
@@ -292,7 +396,8 @@ export function solveIndependently(puzzle) {
   const cells = puzzle.cells;
   const options = puzzle.options;
   const kind = options[0].kind;
-  const evals = options.map((o) => (kind === 'set' ? evaluateSetOption(cells, o) : evaluateFigureOption(cells, o)));
+  const isGlobal = ['scatter', 'multi', 'split'].includes(kind);
+  const evals = options.map((o) => (isGlobal ? evaluateGlobalOption(cells, o) : kind === 'set' ? evaluateSetOption(cells, o) : evaluateFigureOption(cells, o)));
 
   const idx = (level) => evals.map((e, i) => (e.level === level ? i : -1)).filter((i) => i >= 0);
   let candidates = idx('strong');

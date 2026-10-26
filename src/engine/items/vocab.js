@@ -1,5 +1,5 @@
 // Vocabulary items: nearest synonym, nearest antonym, odd one out.
-import { VOCAB, ODD_SETS } from './wordbank.js';
+import { VOCAB, ODD_SETS, CLOZE } from './wordbank.js';
 
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -53,9 +53,39 @@ function oddOneOut(difficulty, rng) {
   };
 }
 
+function cloze(difficulty, rng) {
+  const level = Math.min(5, Math.max(1, difficulty));
+  const pool = CLOZE.filter((c) => c.level === level);
+  if (!pool.length) return null;
+  const c = rng.pick(pool);
+  const entry = VOCAB.find((v) => v.w === c.w);
+  if (!entry) return null;
+  const related = new Set([entry.w, ...entry.syn, ...entry.ant]);
+  const near = VOCAB.filter((v) => v.cluster !== entry.cluster && v.pos === entry.pos && Math.abs(v.level - level) <= 1);
+  const cands = [...new Set(rng.shuffle(near.map((v) => v.w)).filter((w) => !related.has(w)))].slice(0, 3);
+  const trap = rng.pick(entry.ant);
+  const words = [entry.w, trap, ...cands];
+  if (new Set(words).size !== 5) return null;
+  const order = rng.shuffle(words.map((_, i) => i));
+  const options = order.map((i) => words[i]);
+  const correctIndex = order.indexOf(0);
+  const trapIndex = options.indexOf(trap);
+  return {
+    question: 'Which word completes the sentence?',
+    prompt: c.s.replace('____d', '____'),
+    options,
+    correctIndex,
+    distractors: options.map((w, i) => (i === correctIndex ? null : { index: i, code: i === trapIndex ? 'antonym' : 'unrelated', text: i === trapIndex ? 'means the opposite of what the sentence needs' : 'does not fit the sense of the sentence' })),
+    explanation: { summary: `${cap(entry.w)} fits: ${entry.syn.join(', ')}.`, steps: [`The rest of the sentence calls for a word meaning "${entry.syn[0]}"; ${entry.w} means exactly that, while ${trap} means the opposite.`] },
+    hints: ['Read the whole sentence and decide what quality or action it describes.', `You need a word close to "${entry.syn[0]}".`, `${cap(entry.w)} is that word.`],
+    features: { rule: 'cloze', level },
+  };
+}
+
 export function buildVocab(difficulty, rng) {
-  const kind = rng.pick(['synonym', 'antonym', 'odd']);
-  const item = kind === 'odd' ? oddOneOut(difficulty, rng) : synonymOrAntonym(difficulty, rng, kind === 'antonym');
+  const kind = rng.pick(difficulty >= 3 ? ['synonym', 'antonym', 'odd', 'cloze', 'cloze'] : ['synonym', 'antonym', 'odd']);
+  const item = kind === 'cloze' ? cloze(difficulty, rng) : kind === 'odd' ? oddOneOut(difficulty, rng) : synonymOrAntonym(difficulty, rng, kind === 'antonym');
+  if (!item && kind === 'cloze') return buildVocab(difficulty, rng);
   if (!item) return null;
   if (new Set(item.options).size !== item.options.length) return null;
   return item;
