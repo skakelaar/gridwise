@@ -94,9 +94,11 @@ function numberKeyHandler(getView) {
     const view = getView();
     if (!view) return;
     if (/^[1-6]$/.test(e.key)) {
+      const target = document.getElementById(`opt-${Number(e.key) - 1}`);
+      if (!target) return; // fewer options on this question
       e.preventDefault();
       view.select(Number(e.key) - 1);
-      document.getElementById(`opt-${Number(e.key) - 1}`)?.focus();
+      target.focus();
     }
   };
 }
@@ -165,7 +167,7 @@ function renderPractice(mode, s, { focus } = {}) {
     onSubmit: () => {
       if (s.selected == null) {
         const msg = app.querySelector('.submit-msg');
-        if (msg) msg.textContent = 'Choose one of the six options first.';
+        if (msg) msg.textContent = 'Choose one of the options first.';
         document.getElementById('opt-0')?.focus();
         return;
       }
@@ -377,10 +379,10 @@ function showChallenge(parts) {
   const existing = settleChallenge(loadChallenge());
   const resumable = existing && !existing.finished ? existing : null;
   mount(ui.renderChallengeSetup({ resumable, history: storage.loadChallengeHistory() }, {
-    onStart: () => { chal = challenge.createChallenge(); persistChallenge(); navigate('#/challenge/run'); },
+    onStart: (format) => { chal = challenge.createChallenge({ format }); persistChallenge(); navigate('#/challenge/run'); },
     onResume: () => navigate('#/challenge/run'),
     onDiscard: () => { chal = null; storage.clearChallenge(); showChallenge([]); ui.announce('Challenge discarded.'); },
-  }), { title: '12-in-12 challenge' });
+  }), { title: 'Challenge' });
 }
 
 function showChallengeRun() {
@@ -408,14 +410,14 @@ function renderChallengePuzzle(c, { focus } = {}) {
     persistChallenge();
     if (c.finished) return endChallenge(c, 'completed');
     renderChallengePuzzle(c, { focus: 'title' });
-    ui.announce(`${afterText} Puzzle ${c.index + 1} of ${c.items.length}, level ${c.level}.`);
+    ui.announce(`${afterText} Question ${c.index + 1} of ${c.items.length}, level ${c.level}.`);
   };
   const handlers = {
     onSelect: (i) => { selected = i; ui.setSelectedOption(app, selected); },
     onSubmit: () => {
       if (selected == null) {
         const msg = app.querySelector('.submit-msg');
-        if (msg) msg.textContent = 'Choose one of the six options first.';
+        if (msg) msg.textContent = 'Choose one of the options first.';
         document.getElementById('opt-0')?.focus();
         return;
       }
@@ -428,14 +430,14 @@ function renderChallengePuzzle(c, { focus } = {}) {
   const model = {
     puzzle,
     mode: 'challenge',
-    heading: '12-in-12 challenge',
-    progress: `Puzzle ${c.index + 1} of ${c.items.length}`,
+    heading: 'Challenge',
+    progress: `Question ${c.index + 1} of ${c.items.length}`,
     selected,
     answered: null,
     revealed: false,
     showHints: false,
     showCountdown: true,
-    countdownLabel: 'Time remaining for this puzzle',
+    countdownLabel: 'Time remaining for this question',
     canSkip: false,
   };
   mount(ui.renderPuzzleScreen(model, handlers), { title: `Challenge – puzzle ${c.index + 1}`, focusTitle: focus === 'title' });
@@ -446,10 +448,10 @@ function renderChallengePuzzle(c, { focus } = {}) {
     endsAt: challenge.puzzleDeadline(c),
     announceAt: [10],
     onTick: (s) => { if (clock) clock.textContent = formatClock(s); },
-    onAnnounce: (mark) => ui.announce(`${mark} seconds remaining for this puzzle.`),
+    onAnnounce: (mark) => ui.announce(`${mark} seconds remaining for this question.`),
     onEnd: () => {
       challenge.challengeTimeout(c);
-      advance('Time ran out for that puzzle; it is recorded as timed out.');
+      advance('Time ran out for that question; it is recorded as timed out.');
     },
   }).start();
   const prev = teardown;
@@ -495,7 +497,7 @@ function showReviewPuzzle(puzzleId) {
       onSubmit: () => {
         if (s.selected == null) {
           const msg = app.querySelector('.submit-msg');
-          if (msg) msg.textContent = 'Choose one of the six options first.';
+          if (msg) msg.textContent = 'Choose one of the options first.';
           document.getElementById('opt-0')?.focus();
           return;
         }

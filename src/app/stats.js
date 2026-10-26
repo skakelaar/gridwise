@@ -1,5 +1,5 @@
 // Pure statistics over the attempt log. No DOM, no storage.
-import { GROUPS, DIFFICULTY_LABELS } from '../engine/index.js';
+import { ALL_GROUPS as GROUPS, DIFFICULTY_LABELS } from '../engine/index.js';
 
 export const SMALL_SAMPLE = 10;
 

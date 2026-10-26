@@ -1,12 +1,12 @@
 // DOM rendering for every screen. Pure "model in, element out"; event handlers are passed in by main.js.
 // No session or storage logic lives here.
 import { renderCell, renderMatrixPreview } from '../render/svg.js';
-import { FAMILY_IDS, FAMILIES, GROUPS, DIFFICULTY_LABELS } from '../engine/index.js';
+import { FAMILY_IDS, FAMILIES, GROUPS, DIFFICULTY_LABELS, ITEM_FAMILY_IDS, ITEM_FAMILIES, ITEM_GROUPS, ALL_GROUPS, familyInfo, markupToHtml } from '../engine/index.js';
 import {
   PRODUCT_NAME, INDEPENDENCE_NOTICE, INTRO_STEPS, PRACTICE_MODES, TIMED_PRESETS,
   STATS_CAVEAT, PERSONALISATION_NOTE, LIMITATIONS, CHALLENGE_NOTE,
 } from './content.js';
-import { CHALLENGE_RULE, assessmentText } from './challenge.js';
+import { CHALLENGE_FORMATS, assessmentText } from './challenge.js';
 import { formatPercent, formatMs, formatClock, SMALL_SAMPLE } from './stats.js';
 import { describeFilter } from './session.js';
 
@@ -76,13 +76,18 @@ function screenTitle(text) {
 
 export function familySelect({ id, value, onChange }) {
   const sel = h('select', { id, class: 'select', onChange: (e) => onChange(e.target.value) });
-  sel.appendChild(h('option', { value: 'all' }, 'All families (mixed)'));
+  sel.appendChild(h('option', { value: 'everything' }, 'Everything (matrices and other question types)'));
+  sel.appendChild(h('option', { value: 'all' }, 'All matrix families'));
   for (const [gid, g] of Object.entries(GROUPS)) {
-    const og = h('optgroup', { label: g.label });
+    const og = h('optgroup', { label: `Matrices: ${g.label}` });
     og.appendChild(h('option', { value: `group:${gid}` }, `All of: ${g.label}`));
     for (const fid of FAMILY_IDS) if (FAMILIES[fid].group === gid) og.appendChild(h('option', { value: fid }, FAMILIES[fid].label));
     sel.appendChild(og);
   }
+  const og2 = h('optgroup', { label: 'Other question types' });
+  og2.appendChild(h('option', { value: 'items' }, 'All other question types'));
+  for (const fid of ITEM_FAMILY_IDS) og2.appendChild(h('option', { value: fid }, ITEM_FAMILIES[fid].label));
+  sel.appendChild(og2);
   sel.value = value || 'all';
   return sel;
 }
@@ -250,16 +255,20 @@ function optionButton(puzzle, i, model, handlers, done) {
     onKeydown: (e) => optionKeydown(e, i, model, handlers, done),
   },
     h('span', { class: 'option-num', 'aria-hidden': 'true' }, OPTION_NUMBERS[i]),
-    h('span', { class: 'option-fig', html: renderCell(puzzle.options[i], { size: 100 }) }),
+    puzzle.kind === 'item'
+      ? h('span', { class: 'option-text', html: markupToHtml(puzzle.options[i]) })
+      : h('span', { class: 'option-fig', html: renderCell(puzzle.options[i], { size: 100 }) }),
     status ? h('span', { class: 'option-status', 'aria-hidden': 'true' }, status) : null,
   );
+  if (puzzle.kind === 'item') btn.classList.add('option-item');
   return btn;
 }
 
 function optionKeydown(e, i, model, handlers, done) {
   const group = e.currentTarget.closest('.options');
+  const n = group.querySelectorAll('.option').length || 6;
   const move = (to) => {
-    const idx = (to + 6) % 6;
+    const idx = ((to % n) + n) % n;
     const target = group.querySelector(`#opt-${idx}`);
     if (!done) handlers.onSelect(idx);
     target?.focus();
@@ -268,7 +277,7 @@ function optionKeydown(e, i, model, handlers, done) {
     case 'ArrowRight': case 'ArrowDown': e.preventDefault(); move(i + 1); break;
     case 'ArrowLeft': case 'ArrowUp': e.preventDefault(); move(i - 1); break;
     case 'Home': e.preventDefault(); move(0); break;
-    case 'End': e.preventDefault(); move(5); break;
+    case 'End': e.preventDefault(); move(n - 1); break;
     case ' ': e.preventDefault(); if (!done) handlers.onSelect(i); break;
     case 'Enter':
       e.preventDefault();
@@ -317,13 +326,18 @@ function hintsPanel(model, handlers) {
 function explanationBlock(puzzle, chosenIndex, original) {
   const ex = puzzle.explanation;
   const items = (arr) => h('ul', null, (arr || []).map((s) => h('li', null, s)));
-  const block = h('div', { class: 'explanation' },
-    ex.summary ? h('p', { class: 'explanation-summary' }, ex.summary) : null,
-    h('h3', null, 'Across each row'), items(ex.rows),
-    h('h3', null, 'Down each column'), items(ex.columns),
-    h('h3', null, 'How the missing cell follows'), items(ex.missing),
-    ex.unchanged ? h('p', { class: 'explanation-unchanged' }, ex.unchanged) : null,
-  );
+  const block = puzzle.kind === 'item'
+    ? h('div', { class: 'explanation' },
+        ex.summary ? h('p', { class: 'explanation-summary' }, ex.summary) : null,
+        h('h3', null, 'Why'), items(ex.steps),
+      )
+    : h('div', { class: 'explanation' },
+        ex.summary ? h('p', { class: 'explanation-summary' }, ex.summary) : null,
+        h('h3', null, 'Across each row'), items(ex.rows),
+        h('h3', null, 'Down each column'), items(ex.columns),
+        h('h3', null, 'How the missing cell follows'), items(ex.missing),
+        ex.unchanged ? h('p', { class: 'explanation-unchanged' }, ex.unchanged) : null,
+      );
   const d = chosenIndex != null ? puzzle.distractors[chosenIndex] : null;
   if (d) block.appendChild(h('p', { class: 'distractor-note' }, h('strong', null, `Why option ${chosenIndex + 1} is tempting: `), `it ${d.text}.`));
   if (original && original.chosenIndex != null && original.chosenIndex !== chosenIndex) {
@@ -350,7 +364,7 @@ function feedbackPanel(model, handlers) {
   } else if (answered?.correct) {
     title = 'Correct';
     cls += ' is-correct';
-    line = `Option ${correctNo} completes the pattern${answered.ms != null ? ` (answered in ${formatMs(answered.ms)})` : ''}.`;
+    line = `Option ${correctNo} is correct${answered.ms != null ? ` (answered in ${formatMs(answered.ms)})` : ''}.`;
   } else {
     title = 'Not quite';
     cls += ' is-wrong';
@@ -426,11 +440,13 @@ export function renderPuzzleScreen(model, handlers) {
   root.appendChild(head);
   if (model.bar) root.appendChild(model.bar);
 
-  const options = h('div', { class: 'options', role: 'radiogroup', 'aria-label': 'Answer options. Use arrow keys or the number keys 1 to 6 to choose, Enter to submit' },
-    Array.from({ length: 6 }, (_, i) => optionButton(puzzle, i, model, handlers, done)),
+  const nOpts = puzzle.options.length;
+  const isItem = puzzle.kind === 'item';
+  const options = h('div', { class: `options${isItem ? ' options-text' : ''}`, role: 'radiogroup', 'aria-label': `Answer options. Use arrow keys or the number keys 1 to ${nOpts} to choose, Enter to submit` },
+    Array.from({ length: nOpts }, (_, i) => optionButton(puzzle, i, model, handlers, done)),
   );
   const optionsWrap = h('div', { class: 'options-wrap' },
-    h('h2', { class: 'options-title' }, done ? 'Options' : 'Which option completes the pattern?'),
+    h('h2', { class: 'options-title' }, done ? 'Options' : isItem ? puzzle.question : 'Which option completes the pattern?'),
     options,
   );
   if (!done) {
@@ -445,9 +461,19 @@ export function renderPuzzleScreen(model, handlers) {
     if (model.showHints) optionsWrap.appendChild(hintsPanel(model, handlers));
   }
 
-  root.appendChild(h('div', { class: 'puzzle-layout' }, renderMatrix(puzzle, { done }), optionsWrap));
+  root.appendChild(h('div', { class: `puzzle-layout${isItem ? ' puzzle-layout-item' : ''}` }, isItem ? renderPrompt(puzzle) : renderMatrix(puzzle, { done }), optionsWrap));
   if (done) root.appendChild(feedbackPanel(model, handlers));
   return root;
+}
+
+/** The question text of a non-matrix item (number series, logic, arithmetic, analogy). */
+export function renderPrompt(puzzle) {
+  const lines = String(puzzle.prompt).split('\n');
+  return h('div', { class: 'prompt-wrap' },
+    h('div', { class: 'prompt', role: 'group', 'aria-label': puzzle.description.prompt },
+      lines.map((l) => h('p', { class: 'prompt-line', html: markupToHtml(l), 'aria-hidden': 'true' })),
+    ),
+  );
 }
 
 // ---------------------------------------------------------------- timed setup and summary
@@ -509,7 +535,7 @@ export function renderTimedSetup({ settings, resumable }, handlers) {
 export function renderTimedSummary({ session, summary }) {
   const endedText = { completed: 'All puzzles answered or skipped.', time: 'Time ran out.', stopped: 'Ended early.' }[summary.endedBy] || '';
   const rows = session.items.map((item, i) => {
-    const puzzle = { familyLabel: FAMILIES[item.family]?.label || item.family, difficultyLabel: DIFFICULTY_LABELS[item.difficulty] };
+    const puzzle = { familyLabel: familyInfo(item.family)?.label || item.family, difficultyLabel: DIFFICULTY_LABELS[item.difficulty] };
     const result = item.chosenIndex == null ? 'Unanswered' : item.correct ? 'Correct' : 'Incorrect';
     const cls = item.chosenIndex == null ? 'is-unanswered' : item.correct ? 'is-correct' : 'is-wrong';
     return h('tr', null,
@@ -567,7 +593,7 @@ export function renderReviewList({ mistakes }, handlers) {
   screen.appendChild(h('ul', { class: 'mistake-list' },
     mistakes.map((m) => h('li', { class: 'mistake' },
       h('div', { class: 'mistake-text' },
-        h('span', { class: 'mistake-title' }, `${FAMILIES[m.family]?.label || m.family} · Level ${m.difficulty} (${DIFFICULTY_LABELS[m.difficulty] || ''})`),
+        h('span', { class: 'mistake-title' }, `${familyInfo(m.family)?.label || m.family} · Level ${m.difficulty} (${DIFFICULTY_LABELS[m.difficulty] || ''})`),
         h('span', { class: 'mistake-meta' }, `${formatDate(m.at)} · ${GROUPS[m.group]?.label || ''}`),
       ),
       h('div', { class: 'mistake-actions' },
@@ -688,15 +714,14 @@ export { describeFilter, PRODUCT_NAME };
 export function renderChallengeSetup({ resumable, history }, handlers) {
   const past = history.slice().reverse();
   return h('section', { class: 'screen challenge-setup' },
-    screenTitle('12-in-12 challenge'),
-    h('p', { class: 'lead' }, 'Twelve puzzles, sixty seconds each. The difficulty follows your answers, and at the end you get an assessment, a memorandum of every answer, and a full explanation of each puzzle.'),
+    screenTitle('Challenge'),
+    h('p', { class: 'lead' }, 'A fixed number of questions, each on its own clock. The difficulty follows your answers, and at the end you get an assessment, a memorandum of every answer, and a full explanation of each question.'),
     h('div', { class: 'notice' }, h('p', null, CHALLENGE_NOTE)),
     h('fieldset', null,
       h('legend', null, 'How the difficulty moves'),
-      h('p', { class: 'note' }, CHALLENGE_RULE),
+      h('p', { class: 'note' }, CHALLENGE_FORMATS.matrix.rule.split(' Every puzzle')[0]),
       h('ul', { class: 'note' },
-        h('li', null, 'A puzzle that reaches 0:00 is recorded as timed out and the next one starts automatically.'),
-        h('li', null, 'Every rule group appears twice, in a shuffled order.'),
+        h('li', null, 'A question that reaches 0:00 is recorded as timed out and the next one starts automatically.'),
         h('li', null, 'Your answers are added to your progress statistics and mistakes to the review list.'),
       ),
     ),
@@ -707,9 +732,11 @@ export function renderChallengeSetup({ resumable, history }, handlers) {
             h('button', { type: 'button', class: 'btn btn-primary', onClick: handlers.onResume }, 'Resume challenge'),
             h('button', { type: 'button', class: 'btn btn-danger', onClick: handlers.onDiscard }, 'Discard it'),
           ))
-      : h('div', { class: 'actions' },
-          h('button', { type: 'button', class: 'btn btn-primary btn-lg', onClick: handlers.onStart }, 'Start the challenge'),
-          link('#/', 'Back to home'),
+      : h('div', { class: 'preset-list' },
+          ...Object.values(CHALLENGE_FORMATS).map((f) => h('div', { class: 'preset' },
+            h('button', { type: 'button', class: 'btn btn-primary', onClick: () => handlers.onStart(f.id) }, `Start: ${f.label}`),
+            h('p', { class: 'preset-note' }, `${f.blurb} ${f.rule.split('. ').slice(-1)[0]}`),
+          )),
         ),
     past.length
       ? h('section', null,
@@ -718,7 +745,7 @@ export function renderChallengeSetup({ resumable, history }, handlers) {
             const correct = c.items.filter((i) => i.correct).length;
             return h('li', { class: 'mistake challenge-row' },
               h('div', { class: 'mistake-text' },
-                h('span', { class: 'mistake-title' }, `${correct} / ${c.items.length} correct`),
+                h('span', { class: 'mistake-title' }, `${correct} / ${c.items.length} correct · ${(CHALLENGE_FORMATS[c.format] || CHALLENGE_FORMATS.matrix).label}`),
                 h('span', { class: 'mistake-meta' }, `${formatDate(new Date(c.startedAt).toISOString())} · highest level ${Math.max(...c.items.filter((i) => i.difficulty != null).map((i) => i.difficulty))}`),
               ),
               h('div', { class: 'mistake-actions' }, h('a', { class: 'btn btn-small', href: `#/challenge/report/${c.id}` }, 'Open report')),
@@ -729,7 +756,7 @@ export function renderChallengeSetup({ resumable, history }, handlers) {
 }
 
 function levelTrajectory(levels) {
-  return h('ol', { class: 'trajectory', 'aria-label': 'Difficulty level of each puzzle' },
+  return h('ol', { class: 'trajectory', style: `--cols:${Math.max(levels.length, 1)}`, 'aria-label': 'Difficulty level of each question' },
     levels.map((l, i) => h('li', { class: 'trajectory-step', style: `--lvl:${l}` },
       h('span', { class: 'trajectory-bar', 'aria-hidden': 'true' }),
       h('span', { class: 'trajectory-label' }, h('span', { class: 'visually-hidden' }, `Puzzle ${i + 1}: level `), String(l)),
@@ -743,22 +770,24 @@ function answerKey(puzzle, item, index) {
     return h('details', { class: 'answer-key' },
       h('summary', null,
         h('span', { class: 'answer-key-num' }, String(index + 1).padStart(2, '0')),
-        h('span', { class: 'answer-key-title' }, `${GROUPS[item.group]?.label || item.group} · not reached`),
+        h('span', { class: 'answer-key-title' }, `${ALL_GROUPS[item.group]?.label || item.group} · not reached`),
         h('span', { class: 'result is-unanswered' }, 'Not reached'),
       ),
       h('div', { class: 'answer-key-body' }, h('p', { class: 'note-small' }, 'This puzzle was never presented, so there is nothing to explain. Its level would have depended on your previous answer.')),
     );
   }
   const yours = item.chosenIndex;
-  const options = h('div', { class: 'options options-compact' },
+  const isItem = puzzle.kind === 'item';
+  const options = h('div', { class: `options options-compact${isItem ? ' options-text' : ''}` },
     puzzle.options.map((cell, i) => {
       const cls = ['option', 'cell', 'is-static'];
+      if (isItem) cls.push('option-item');
       if (i === puzzle.correctIndex) cls.push('is-correct');
       if (yours === i && !item.correct) cls.push('is-wrong');
       const status = i === puzzle.correctIndex ? 'Correct answer' : yours === i ? 'Your answer' : '';
       return h('div', { class: cls.join(' '), role: 'img', 'aria-label': `Option ${i + 1}: ${puzzle.description.options[i]}${status ? `. ${status}` : ''}` },
         h('span', { class: 'option-num', 'aria-hidden': 'true' }, String(i + 1)),
-        h('div', { class: 'option-fig', html: renderCell(cell) }),
+        isItem ? h('span', { class: 'option-text', html: markupToHtml(cell) }) : h('div', { class: 'option-fig', html: renderCell(cell) }),
         status ? h('span', { class: 'option-status', 'aria-hidden': 'true' }, status) : null,
       );
     }),
@@ -772,8 +801,8 @@ function answerKey(puzzle, item, index) {
       h('span', { class: `result ${resultCls}` }, result),
     ),
     h('div', { class: 'answer-key-body' },
-      h('div', { class: 'puzzle-layout' },
-        renderMatrix(puzzle, { done: true, idPrefix: `key-${index}` }),
+      h('div', { class: `puzzle-layout${isItem ? ' puzzle-layout-item' : ''}` },
+        isItem ? renderPrompt(puzzle) : renderMatrix(puzzle, { done: true, idPrefix: `key-${index}` }),
         h('div', { class: 'options-wrap' }, h('h3', { class: 'options-title' }, 'Options'), options),
       ),
       explanationBlock(puzzle, item.correct ? null : item.chosenIndex, null),
@@ -785,19 +814,20 @@ function answerKey(puzzle, item, index) {
 }
 
 export function renderChallengeReport({ challenge, report, puzzles }) {
-  const endedText = { completed: 'All twelve puzzles were presented.', time: 'The twelve minutes ran out.', stopped: 'Ended early.' }[report.endedBy] || '';
+  const fmt = CHALLENGE_FORMATS[report.format] || CHALLENGE_FORMATS.matrix;
+  const endedText = { completed: `All ${report.total} questions were presented.`, time: 'The time ran out.', stopped: 'Ended early.' }[report.endedBy] || '';
   const memoRows = challenge.items.map((item, i) => {
     const p = puzzles[i];
     const result = item.timedOut ? 'Timed out' : item.chosenIndex == null ? 'Not reached' : item.correct ? 'Correct' : 'Incorrect';
     const cls = item.correct ? 'is-correct' : item.chosenIndex == null ? 'is-unanswered' : 'is-wrong';
     return h('tr', { class: item.correct ? '' : 'is-miss' },
       h('td', null, String(i + 1)),
-      h('td', null, `${GROUPS[item.group].label}`, h('br'), h('span', { class: 'mistake-meta' }, FAMILIES[item.family]?.label || item.family)),
+      h('td', null, `${ALL_GROUPS[item.group]?.label || item.group}`, h('br'), h('span', { class: 'mistake-meta' }, familyInfo(item.family)?.label || item.family)),
       h('td', null, item.difficulty == null ? '–' : `${item.difficulty} – ${DIFFICULTY_LABELS[item.difficulty]}`),
       h('td', null, item.chosenIndex == null ? '–' : String(item.chosenIndex + 1)),
       h('td', null, p ? String(p.correctIndex + 1) : '–'),
       h('td', null, h('span', { class: `result ${cls}` }, result)),
-      h('td', null, item.chosenIndex == null ? (item.timedOut ? '1:00' : '–') : formatMs(item.ms)),
+      h('td', null, item.chosenIndex == null ? (item.timedOut ? 'timed out' : '–') : formatMs(item.ms)),
       h('td', null, p ? h('a', { href: `#key-${i}` }, 'See', h('span', { class: 'visually-hidden' }, ` explanation for puzzle ${i + 1}`)) : '–'),
     );
   });
@@ -808,18 +838,18 @@ export function renderChallengeReport({ challenge, report, puzzles }) {
   ));
   return h('section', { class: 'screen challenge-report' },
     screenTitle('Challenge report'),
-    h('p', { class: 'lead' }, `${endedText} ${formatDate(new Date(challenge.startedAt).toISOString())}.`),
+    h('p', { class: 'lead' }, `${fmt.label}. ${endedText} ${formatDate(new Date(challenge.startedAt).toISOString())}.`),
     h('div', { class: 'stat-tiles' },
       statTile('Score', `${report.correct} / ${report.total}`, `${report.wrong} incorrect · ${report.timedOut} timed out · ${report.notReached} not reached`),
       statTile('Highest level', report.highest == null ? '–' : `${report.highest}`, report.highest == null ? '' : DIFFICULTY_LABELS[report.highest]),
-      statTile('Average time', report.avgMs == null ? '–' : `${Math.round(report.avgMs / 1000)} s`, 'per answered puzzle (60 s available)'),
-      statTile('Time used', formatMs(report.usedMs), 'of 12 min'),
+      statTile('Average time', report.avgMs == null ? '–' : `${Math.round(report.avgMs / 1000)} s`, `per answered question (${report.secondsPer} s available)`),
+      statTile('Time used', formatMs(report.usedMs), `of ${Math.round(report.limitMs / 60000)} min`),
     ),
     h('h2', null, 'Assessment'),
     h('div', { class: 'assessment' }, assessmentText(report).map((t) => h('p', null, t))),
     h('h3', null, 'Difficulty path'),
     levelTrajectory(report.levels),
-    h('p', { class: 'note-small' }, CHALLENGE_RULE),
+    h('p', { class: 'note-small' }, fmt.rule),
     h('div', { class: 'table-wrap' },
       h('table', { class: 'table stats-table' },
         h('caption', null, 'By rule group'),
@@ -837,7 +867,7 @@ export function renderChallengeReport({ challenge, report, puzzles }) {
       ),
     ),
     h('h2', null, 'Explanations'),
-    h('p', { class: 'note-small' }, 'Incorrect, timed-out and unreached puzzles are expanded; open any other to read its explanation.'),
+    h('p', { class: 'note-small' }, 'Incorrect, timed-out and unreached questions are expanded; open any other to read its explanation.'),
     h('div', { class: 'answer-keys' }, challenge.items.map((item, i) => {
       const wrap = answerKey(puzzles[i], item, i);
       wrap.id = `key-${i}`;

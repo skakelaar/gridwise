@@ -665,3 +665,30 @@ tr.is-small td, tr.is-small th { color: var(--text-muted); }
 .options-compact .option.is-static:hover { transform: none; box-shadow: none; border-color: var(--border); }
 .options-compact .option.is-correct:hover { border-color: var(--correct); }
 .options-compact .option.is-wrong:hover { border-color: var(--wrong); }
+
+/* ------------------------------------------------------------ non-matrix questions */
+
+.prompt-wrap { width: 100%; }
+.prompt {
+  background: var(--surface);
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: 1.1rem 1.25rem;
+  box-shadow: var(--shadow);
+  font-size: 1.25rem;
+  line-height: 1.6;
+}
+.prompt-line { margin: 0; }
+.prompt-line + .prompt-line { margin-top: 0.35rem; }
+.frac { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; margin: 0 0.15em; line-height: 1.15; font-family: var(--font-mono); font-size: 0.85em; }
+.frac-num { border-bottom: 1.5px solid currentColor; padding: 0 0.2em; }
+.frac-den { padding: 0 0.2em; }
+sup { font-size: 0.7em; line-height: 0; }
+.options-text { grid-template-columns: 1fr; }
+.option-item { flex-direction: row; align-items: center; justify-content: flex-start; text-align: left; padding: 0.6rem 0.75rem 0.6rem 2.6rem; gap: 0.75rem; }
+.option-item .option-num { top: 50%; transform: translateY(-50%); }
+.option-item .option-text { font-size: 1.1rem; }
+.option-item .option-status { margin-left: auto; }
+.puzzle-layout-item { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 700px) { .puzzle-layout-item { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.trajectory { grid-template-columns: repeat(var(--cols, 12), minmax(0, 1fr)); }

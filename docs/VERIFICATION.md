@@ -65,6 +65,15 @@ discarded a session.
   group table, memorandum with your/correct answers, and an expandable explanation for every puzzle. A crash on
   unreached puzzles in the report was found this way and fixed.
 
+## Other question types and mixed challenge (added 2026-10-26)
+
+* `tests/items.test.js`: 4 families × 4 levels × 150 seeds generate, reproduce byte-for-byte, have 4–5 distinct
+  options with one correct answer, named distractors, explanation and hints; number-series items admit exactly
+  one in-grammar continuation; equation-filling items have exactly one satisfying option; markup renders.
+* `tests/challenge.test.js`: mixed format has 16 slots (8 matrices, 2 of each other group), 30 s each, 8 minutes.
+* Browser: practice with each question type (prompt, text options, keyboard, feedback), a 16-question mixed
+  challenge answered through to the report, item answer keys with fractions rendered, progress by group.
+
 ## Not verified
 
 * Real screen-reader output (ARIA roles, labels and live regions were checked in the DOM only).

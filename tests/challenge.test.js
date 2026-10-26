@@ -44,6 +44,22 @@ test('staircase moves one level per answer within 1..4 and timeouts count as mis
   assert.ok(assessmentText(r).join(' ').includes('small sample'));
 });
 
+test('mixed format: sixteen questions, thirty seconds each, items regenerate', () => {
+  const c = createChallenge({ format: 'mixed', now: 0, random: seededRandom('m') });
+  assert.equal(c.items.length, 16);
+  assert.equal(c.endsAt, 8 * 60 * 1000);
+  assert.equal(puzzleDeadline(c), 30 * 1000);
+  const groups = c.items.map((i) => i.group);
+  for (const g of ['series', 'logic', 'numeric', 'verbal']) assert.equal(groups.filter((x) => x === g).length, 2);
+  assert.equal(groups.filter((g) => !['series', 'logic', 'numeric', 'verbal'].includes(g)).length, 8);
+  let now = 0;
+  while (!c.finished) { const { puzzle } = challengeCurrent(c); assert.ok(puzzle.options.length >= 4); now += 1000; challengeAnswer(c, puzzle.correctIndex, now); }
+  const r = challengeReport(c);
+  assert.equal(r.correct, 16);
+  assert.equal(r.secondsPer, 30);
+  assert.ok(r.groups.some((g) => g.id === 'verbal'));
+});
+
 test('catchUp applies elapsed timeouts after a reload and ends the challenge at the deadline', () => {
   const c = createChallenge({ now: 0, random: seededRandom('c') });
   catchUp(c, 2 * 60 * 1000 + 10);

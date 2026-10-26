@@ -51,9 +51,17 @@ docs/VERIFICATION.md  what was verified and known limitations
 
 Puzzle logic never touches the DOM; the app layer only calls `generatePuzzle` and `renderCell`.
 
-## 12-in-12 challenge
+## Other question types
 
-`#/challenge`: twelve puzzles, sixty seconds each, every rule group twice in a shuffled order. Difficulty follows
+Besides matrices, Gridwise generates number series, logical deduction (syllogisms and ordering problems),
+fractions, percentages and equation filling, and verbal analogies, all original and seeded. They appear in
+practice (family filter "Everything" or "Other question types") and in the mixed challenge. See `docs/RULES.md`.
+
+## Challenge
+
+`#/challenge`: two formats, "12 matrices in 12 minutes" (60 s each, every rule group twice) and "16 mixed
+questions in 8 minutes" (30 s each: eight matrices plus two each of number series, logic, arithmetic and
+analogies). Difficulty follows
 a stated 1-up/1-down staircase (start at level 2; correct → up one level, incorrect or timeout → down one level,
 within 1–4). The report gives a plain-language assessment, a difficulty path, a memorandum of every answer
 (your answer, the correct answer, result, time) and the full explanation of each puzzle. Finished challenges are

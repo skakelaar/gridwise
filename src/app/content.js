@@ -86,7 +86,7 @@ export const PRACTICE_MODES = {
   untimed: { title: 'Untimed practice', blurb: 'Work at your own pace with no clock; explanations appear after each answer.' },
   timed: { title: 'Timed session', blurb: 'Set a puzzle count and a time limit, then review everything at the end.' },
   review: { title: 'Mistake review', blurb: 'Revisit the puzzles you got wrong and see which misconception each option was testing.' },
-  challenge: { title: '12-in-12 challenge', blurb: 'Twelve puzzles, sixty seconds each, difficulty stepping up and down with your answers, then a full report.' },
+  challenge: { title: 'Challenge', blurb: '12 matrices in 12 minutes, or 16 mixed questions (matrices, number series, logic, arithmetic, analogies) in 8 minutes, with difficulty stepping up and down, then a full report.' },
 };
 
 export const CHALLENGE_NOTE = 'This challenge is a practice format. The up-and-down difficulty rule is stated in full below; it does not reproduce the adaptive algorithm, item bank, timing, scoring or norms of Matrigma or any other published test, and the report is not an official or comparable score.';
@@ -126,6 +126,7 @@ export const PERSONALISATION_NOTE =
   + 'answers at the current level and goes down one level after two consecutive mistakes. Nothing else influences the choice.';
 
 export const LIMITATIONS = [
+  'Number series, logical deduction, arithmetic and analogy questions are original and generated from a small set of templates and a curated English word bank; they are practice in those formats, not a reconstruction of any published test\'s items.',
   'The 12-in-12 challenge uses a simple, stated up-and-down difficulty rule; it is not the adaptive procedure of any published test and its report is not an official or comparable score.',
   'Level 4 (Expert) stacks four independent rules and adds inner shapes and count arithmetic; it is harder by construction, not by any measured norm.',
   'Each puzzle is checked to have exactly one answer within the supported rule grammar (progressions, alternations, one-of-each layouts and set operations), not against every pattern a person might imagine.',

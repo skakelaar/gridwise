@@ -1,6 +1,6 @@
 // Session state: which puzzle is up, what the user did, and how the next puzzle is chosen.
 // No DOM and no storage here; the app layer only calls generatePuzzle from the engine.
-import { generatePuzzle, randomSeed, FAMILY_IDS, FAMILIES, GROUPS } from '../engine/index.js';
+import { generateAny, randomSeed, FAMILY_IDS, FAMILIES, ITEM_FAMILY_IDS, ITEM_FAMILIES, ALL_GROUPS, familyInfo } from '../engine/index.js';
 
 export const RECENT_WINDOW = 30; // attempts counted as "recent" by practice personalisation
 
@@ -9,18 +9,22 @@ export const RECENT_WINDOW = 30; // attempts counted as "recent" by practice per
 /** Resolve a filter value ('all', 'group:<id>' or a family id) into a list of family ids. */
 export function familiesForFilter(filter) {
   if (!filter || filter === 'all') return FAMILY_IDS.slice();
+  if (filter === 'everything') return [...FAMILY_IDS, ...ITEM_FAMILY_IDS];
+  if (filter === 'items') return ITEM_FAMILY_IDS.slice();
   if (filter.startsWith('group:')) {
     const g = filter.slice(6);
-    const ids = FAMILY_IDS.filter((id) => FAMILIES[id].group === g);
+    const ids = [...FAMILY_IDS.filter((id) => FAMILIES[id].group === g), ...ITEM_FAMILY_IDS.filter((id) => ITEM_FAMILIES[id].group === g)];
     return ids.length ? ids : FAMILY_IDS.slice();
   }
-  return FAMILIES[filter] ? [filter] : FAMILY_IDS.slice();
+  return familyInfo(filter) ? [filter] : FAMILY_IDS.slice();
 }
 
 export function describeFilter(filter) {
-  if (!filter || filter === 'all') return 'All families';
-  if (filter.startsWith('group:')) return GROUPS[filter.slice(6)]?.label || 'All families';
-  return FAMILIES[filter]?.label || 'All families';
+  if (!filter || filter === 'all') return 'All matrix families';
+  if (filter === 'everything') return 'Everything (matrices and other question types)';
+  if (filter === 'items') return 'All other question types';
+  if (filter.startsWith('group:')) return ALL_GROUPS[filter.slice(6)]?.label || 'All matrix families';
+  return familyInfo(filter)?.label || 'All matrix families';
 }
 
 function weightedPick(items, weights, random) {
@@ -79,7 +83,7 @@ export function updateAdaptive(adaptive, correct) {
 // ---------------------------------------------------------------- single-puzzle session (guided / untimed / review)
 
 export function startPuzzle({ mode, spec, now = Date.now(), original = null }) {
-  const puzzle = generatePuzzle(spec);
+  const puzzle = generateAny(spec);
   return {
     mode,                  // 'guided' | 'untimed' | 'review'
     spec: { family: puzzle.family, difficulty: puzzle.difficulty, seed: puzzle.seed },
@@ -184,7 +188,7 @@ const puzzleCache = new Map();
 /** Regenerate (and cache) the puzzle for a stored spec. */
 export function puzzleFor(spec) {
   const key = `${spec.family}|${spec.difficulty}|${spec.seed}`;
-  if (!puzzleCache.has(key)) puzzleCache.set(key, generatePuzzle({ family: spec.family, difficulty: spec.difficulty, seed: spec.seed }));
+  if (!puzzleCache.has(key)) puzzleCache.set(key, generateAny({ family: spec.family, difficulty: spec.difficulty, seed: spec.seed }));
   return puzzleCache.get(key);
 }
 
