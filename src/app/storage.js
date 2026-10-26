@@ -21,6 +21,8 @@ const MAX_CHALLENGES = 20;
 const MAX_ATTEMPTS = 5000;
 
 export const DEFAULT_SETTINGS = {
+  practiceHints: true,
+  testFormat: 'mock',
   personalise: false,
   practiceFamily: 'all',       // 'all' | 'group:<id>' | '<familyId>'
   practiceDifficulty: 'mixed', // 'mixed' | '1' | '2' | '3'

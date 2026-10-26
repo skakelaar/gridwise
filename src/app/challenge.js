@@ -13,7 +13,7 @@ export const CHALLENGE = {
   maxLevel: MAX_DIFFICULTY,
 };
 
-const STAIRCASE = 'You start at level 2. Each correct answer moves the next question one level up (to a maximum of 5, Master); each incorrect answer or timeout moves it one level down (to a minimum of 1).';
+const STAIRCASE = 'You start at level 2. Each correct answer moves the next question one level up (to a maximum of 6, Grandmaster); each incorrect answer or timeout moves it one level down (to a minimum of 1).';
 
 export const CHALLENGE_FORMATS = {
   matrix: { id: 'matrix', label: '12 matrices in 12 minutes', count: 12, seconds: 60, blurb: 'Every rule group twice, 60 seconds per puzzle.', rule: `${STAIRCASE} Every puzzle has its own 60-second clock, so the whole challenge lasts at most 12 minutes.` },
@@ -189,7 +189,7 @@ export function assessmentText(r) {
   if (r.highest != null && r.adaptive === false) {
     parts.push(`Levels ranged from ${Math.min(...r.levels)} to ${r.highest}; you were correct on ${r.correctAtHighest} of ${r.levels.filter((l) => l === r.highest).length} question${r.levels.filter((l) => l === r.highest).length === 1 ? '' : 's'} at level ${r.highest}.`);
   } else if (r.highest != null) {
-    parts.push(`The staircase took you as high as level ${r.highest} (${['', 'Basic', 'Intermediate', 'Advanced', 'Expert', 'Master'][r.highest]}), where you were correct on ${r.correctAtHighest} of ${r.levels.filter((l) => l === r.highest).length} question${r.levels.filter((l) => l === r.highest).length === 1 ? '' : 's'}, and it finished at level ${r.finalLevel}.`);
+    parts.push(`The staircase took you as high as level ${r.highest} (${['', 'Basic', 'Intermediate', 'Advanced', 'Expert', 'Master', 'Grandmaster'][r.highest]}), where you were correct on ${r.correctAtHighest} of ${r.levels.filter((l) => l === r.highest).length} question${r.levels.filter((l) => l === r.highest).length === 1 ? '' : 's'}, and it finished at level ${r.finalLevel}.`);
   }
   if (r.avgMs != null) parts.push(`Your average time per answered question was ${Math.round(r.avgMs / 1000)} seconds${r.secondsPer ? ` of the ${r.secondsPer} available` : ''}.`);
   if (r.strongest.length) parts.push(`Every question was correct in: ${r.strongest.join(', ')}.`);

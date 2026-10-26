@@ -10,7 +10,7 @@ let html = `<!doctype html><meta charset="utf-8"><title>Puzzle gallery</title>
 .m{display:grid;grid-template-columns:repeat(3,70px);gap:4px}.m div{border:1px solid #999;width:70px;height:70px;display:flex;align-items:center;justify-content:center;font-size:30px}
 .o{display:grid;grid-template-columns:repeat(3,70px);gap:4px}.o div{border:1px solid #999;width:70px;height:70px;position:relative}.o div.c{outline:3px solid #2a7}.o span{position:absolute;left:2px;top:0;font-size:11px}
 .t{max-width:520px;font-size:13px}</style><h1>Puzzle gallery</h1>`;
-for (const family of FAMILY_IDS) for (const d of [1, 2, 3, 4, 5]) for (let s = 0; s < n; s++) {
+for (const family of FAMILY_IDS) for (const d of [1, 2, 3, 4, 5, 6]) for (let s = 0; s < n; s++) {
   const p = generatePuzzle({ family, difficulty: d, seed: `g${s}` });
   html += `<div class="p"><div><b>${p.id}</b><div class="m">${p.cells.slice(0, 8).map((c) => `<div>${renderCell(c, { size: 64 })}</div>`).join('')}<div>?</div></div></div>`;
   html += `<div><div class="o">${p.options.map((c, i) => `<div class="${i === p.correctIndex ? 'c' : ''}"><span>${i + 1}</span>${renderCell(c, { size: 64 })}</div>`).join('')}</div></div>`;

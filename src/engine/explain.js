@@ -69,7 +69,7 @@ function startsText(line, attr, label, domain, starts) {
 }
 
 // Returns { row, column, missing } sentences for one rule.
-export function explainRule(rule, domain, family) {
+export function explainRule(rule, domain, family, domains = null) {
   const attr = rule.attr;
   const label = ATTR_LABEL[attr];
   const V = rule.values;
@@ -124,6 +124,18 @@ export function explainRule(rule, domain, family) {
         column: `Down each column the ${label} alternates: ${vn(domain, attr, p.A)}, ${vn(domain, attr, p.B)}, ${vn(domain, attr, p.A)}.`,
         missing: `The missing cell is the third in its column, so the ${label} returns to ${vn(domain, attr, p.A)}.`,
       };
+    case 'coupled': {
+      const src = p.source;
+      const srcDomain = domains ? domains[src] : null;
+      const srcName = (i) => (srcDomain ? valueName(src, srcDomain.values[i]) : String(i));
+      const links = Object.entries(p.map).map(([a, b]) => `${srcName(Number(a))} → ${vn(domain, attr, b)}`);
+      const missingSrc = srcName(Number(Object.keys(p.map).find((a) => p.map[a] === V[2][2])));
+      return {
+        row: `The ${label} has no pattern of its own: it is tied to the ${ATTR_LABEL[src]} (${listNames(links)}).`,
+        column: 'That link holds in every cell, across rows and down columns alike.',
+        missing: `The missing cell's ${ATTR_LABEL[src]} is ${missingSrc}, so its ${label} must be ${vn(domain, attr, V[2][2])}.`,
+      };
+    }
     case 'rowSum': case 'rowDiff': case 'colSum': case 'colDiff': {
       const along = rule.type.startsWith('row') ? 'row' : 'column';
       const across = along === 'row' ? 'columns' : 'rows';
@@ -157,7 +169,7 @@ const runsBoth = (r) => r.type === 'latin' || r.type === 'checker' || r.type ===
 export function explainFigurePuzzle(rules, domains, family, answer) {
   const active = rules.filter((r) => r.type !== 'const');
   const constant = rules.filter((r) => r.type === 'const');
-  const parts = active.map((r) => explainRule(r, domains[r.attr], family));
+  const parts = active.map((r) => explainRule(r, domains[r.attr], family, domains));
   const rows = parts.map((p) => p.row);
   const columns = parts.map((p) => p.column);
   const missing = parts.map((p) => p.missing);
@@ -184,6 +196,7 @@ function lookHint(r) {
   if (r.type === 'latin') return `Look at row 1, then row 2. Does any ${label} repeat within a row? Now check the columns the same way.`;
   if (r.type === 'checker') return `Compare neighbouring cells along row 1 and down column 1. Does the ${label} alternate in both directions?`;
   if (r.type === 'grid') return `Read along row 1, then down column 1. The ${label} changes by a fixed step in both directions.`;
+  if (r.type === 'coupled') return `The ${label} follows no row or column pattern. Compare it with the other attributes cell by cell: it is tied to one of them.`;
   if (r.type === 'rowSum' || r.type === 'rowDiff') return `Count the shapes in the first two cells of row 1. How do they combine to give the third cell's count?`;
   if (r.type === 'colSum' || r.type === 'colDiff') return `Count the shapes in the first two cells of column 1. How do they combine to give the third cell's count?`;
   if (runsDown(r)) return `Read down column 1, then column 2. How does the ${label} change from one cell to the next?`;
@@ -191,7 +204,7 @@ function lookHint(r) {
 }
 
 function ruleHint(r, domains, family) {
-  const e = explainRule(r, domains[r.attr], family);
+  const e = explainRule(r, domains[r.attr], family, domains);
   return runsDown(r) ? e.column : e.row;
 }
 
@@ -214,7 +227,7 @@ export function figureHints(rules, domains, family) {
   return hints;
 }
 
-export function explainSetPuzzle(op, orientation, palette, known, answer) {
+export function explainSetPuzzle(op, orientation, palette, known, answer, colOp = null) {
   const pal = SET_PALETTES[palette];
   const names = (m) => (m.length ? listNames(m.map((x) => pal.names[x])) : 'nothing');
   const o = OP_TEXT[op];
@@ -223,9 +236,12 @@ export function explainSetPuzzle(op, orientation, palette, known, answer) {
   const first = orientation === 'row' ? known[2][0] : known[0][2];
   const second = orientation === 'row' ? known[2][1] : known[1][2];
   const ruleText = `In each ${along}, the third cell ${o.verb} the first two: ${o.how}.` + (o.note ? ` ${o.note}` : '');
-  const noRule = `The ${across} follow no rule of their own. Use ${along}s 1 and 2 to confirm the operation, then apply it to ${along} 3.`;
+  const co = colOp ? OP_TEXT[colOp] : null;
+  const noRule = co
+    ? `The columns follow a second operation of their own: in each column, the third cell ${co.verb} the first two (${co.how}). Both operations give the same missing cell.`
+    : `The ${across} follow no rule of their own. Use ${along}s 1 and 2 to confirm the operation, then apply it to ${along} 3.`;
   return {
-    summary: `This is ${article(o.name)} ${o.name} puzzle: the rule runs along the ${along}s.`,
+    summary: co ? `Two operations are at work: ${o.name} along the rows and ${co.name} down the columns.` : `This is ${article(o.name)} ${o.name} puzzle: the rule runs along the ${along}s.`,
     rows: [orientation === 'row' ? ruleText : noRule],
     columns: [orientation === 'row' ? noRule : ruleText],
     missing: [
@@ -236,9 +252,10 @@ export function explainSetPuzzle(op, orientation, palette, known, answer) {
   };
 }
 
-export function setHints(op, orientation) {
+export function setHints(op, orientation, colOp = null) {
   const along = orientation === 'row' ? 'row' : 'column';
-  return [
+  const extra = colOp ? [`The columns follow a second operation (${OP_TEXT[colOp].name}); either direction gives the answer, and they agree.`] : [];
+  return [...extra,
     `Treat each cell as a collection of separate elements rather than one picture. Compare the first two cells of ${along} 1 with its third cell.`,
     `Is the third cell of each ${along} fuller or emptier than the first two? Fuller suggests combining them; emptier suggests keeping only part of them.`,
     `The third cell of each ${along} is built from the first two by one operation. Does it keep everything, only the shared elements, or only the differences?`,

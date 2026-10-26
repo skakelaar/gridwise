@@ -45,7 +45,7 @@ test('qa-solver does not need the hidden answer cell', () => {
 });
 
 for (const family of FAMILY_IDS) {
-  for (const difficulty of [1, 2, 3, 4, 5]) {
+  for (const difficulty of [1, 2, 3, 4, 5, 6]) {
     test(`${family} d${difficulty}: independent solver agrees on ≥99% of ${SEEDS} seeds and finds no second consistent option`, () => {
       let agree = 0;
       const disagreements = [];

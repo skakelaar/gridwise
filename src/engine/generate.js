@@ -35,8 +35,8 @@ export const FAMILIES = {
   combination:  { group: 'combination', label: 'Combination', kind: 'figure', core: null },
 };
 
-export const DIFFICULTY_LABELS = { 1: 'Basic', 2: 'Intermediate', 3: 'Advanced', 4: 'Expert', 5: 'Master' };
-export const MAX_DIFFICULTY = 5;
+export const DIFFICULTY_LABELS = { 1: 'Basic', 2: 'Intermediate', 3: 'Advanced', 4: 'Expert', 5: 'Master', 6: 'Grandmaster' };
+export const MAX_DIFFICULTY = 6;
 export const FAMILY_IDS = Object.keys(FAMILIES);
 
 const MAX_ATTEMPTS = 400;
@@ -106,9 +106,9 @@ function chooseActiveRules(family, fam, difficulty, rng) {
   if (fam.core) {
     const attr = Array.isArray(fam.core.attr) ? rng.pick(fam.core.attr) : fam.core.attr;
     push(attr, rng.pick(typesFor(attr, fam.core.types, difficulty)));
-    target = difficulty; // 1–4 rules
+    target = Math.min(5, difficulty); // 1–5 rules; level 6 couples one of them to another
   } else {
-    target = { 1: 2, 2: 3, 3: 3, 4: 4, 5: 5 }[difficulty];
+    target = { 1: 2, 2: 3, 3: 3, 4: 4, 5: 5, 6: 5 }[difficulty];
   }
   const pool = rng.shuffle(Object.keys(EXTRA_POOL));
   for (const attr of pool) {
@@ -161,6 +161,26 @@ function buildFigurePuzzle(family, fam, difficulty, rng) {
       rules[attr] = makeRule(attr, 'const', domains[attr], rng, { value });
     }
   }
+  // Level 6: one extra attribute stops following its own rule and becomes a function of another attribute.
+  let coupled = null;
+  if (difficulty >= 6) {
+    const coreAttr = active[0].attr;
+    const sources = active.filter((a) => ['latin', 'rowAlt', 'colAlt', 'checker'].includes(a.type));
+    const targets = active.filter((a) => a.attr !== coreAttr && ['fill', 'size', 'shape', 'inner', 'innerFill', 'flip'].includes(a.attr));
+    const pairs = [];
+    for (const s of sources) for (const t of targets) if (s.attr !== t.attr) pairs.push([s.attr, t.attr]);
+    if (!pairs.length) return null;
+    const [A, B] = rng.pick(pairs);
+    const srcValues = [...new Set(rules[A].values.flat())];
+    const allowedB = B === 'inner' ? [1, 2, 3] : domains[B].values.map((_, i) => i);
+    if (allowedB.length < srcValues.length) return null;
+    const targetsB = rng.sample(allowedB, srcValues.length);
+    const map = {};
+    srcValues.forEach((v, i) => { map[v] = targetsB[i]; });
+    const values = rules[A].values.map((row) => row.map((v) => map[v]));
+    rules[B] = { attr: B, type: 'coupled', params: { source: A, map }, values };
+    coupled = { source: A, target: B };
+  }
   // Materialise cells.
   const cells = [];
   for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
@@ -171,10 +191,36 @@ function buildFigurePuzzle(family, fam, difficulty, rng) {
   const answer = cells[8];
   // Verify uniqueness within the grammar, attribute by attribute.
   const verification = { attributes: {} };
+  const predsByAttr = {};
   for (const attr of FIGURE_ATTRS) {
     const known = rules[attr].values.map((row) => row.slice());
     known[2][2] = null;
-    const preds = predictAttribute(domains[attr], known);
+    predsByAttr[attr] = predictAttribute(domains[attr], known);
+  }
+  // Coupled readings: attribute B is a function of attribute A over the eight known cells, where A has a
+  // unique reading of its own (snapshot, so couplings never lean on other couplings).
+  const basePreds = {};
+  for (const attr of FIGURE_ATTRS) basePreds[attr] = new Map(predsByAttr[attr]);
+  for (const B of FIGURE_ATTRS) {
+    for (const A of FIGURE_ATTRS) {
+      if (A === B || basePreds[A].size !== 1) continue;
+      const aPred = [...basePreds[A].keys()][0];
+      const map = new Map();
+      let ok = true;
+      for (let r = 0; r < 3 && ok; r++) for (let c = 0; c < 3; c++) {
+        if (r === 2 && c === 2) continue;
+        const a = rules[A].values[r][c], b = rules[B].values[r][c];
+        if (map.has(a) && map.get(a) !== b) { ok = false; break; }
+        map.set(a, b);
+      }
+      if (!ok || map.size < 2 || map.size > 3 || !map.has(aPred)) continue;
+      const v = map.get(aPred);
+      if (!predsByAttr[B].has(v)) predsByAttr[B].set(v, []);
+      predsByAttr[B].get(v).push(`coupled:${A}`);
+    }
+  }
+  for (const attr of FIGURE_ATTRS) {
+    const preds = predsByAttr[attr];
     const expected = rules[attr].values[2][2];
     verification.attributes[attr] = { predictions: [...preds.entries()].map(([v, names]) => ({ value: domains[attr].values[v], hypotheses: names })) };
     if (preds.size !== 1 || !preds.has(expected)) return null;
@@ -185,6 +231,7 @@ function buildFigurePuzzle(family, fam, difficulty, rng) {
   if (!options) return null;
   const explanation = explainFigurePuzzle(ruleList, domains, family, answer);
   const hints = figureHints(ruleList, domains, family);
+  void coupled;
   const activeRules = ruleList.filter((r) => r.type !== 'const');
   return finish({
     kind: 'figure',
@@ -204,6 +251,7 @@ function buildFigurePuzzle(family, fam, difficulty, rng) {
       orientation: orientationActive,
       inner: innerActive,
       arithmetic: activeRules.some((r) => ARITH_TYPES.includes(r.type)),
+      coupled: activeRules.some((r) => r.type === 'coupled'),
       maxStep: Math.max(0, ...activeRules.map((r) => Math.abs(r.params.step ?? r.params.a ?? 0), ...activeRules.map((r) => Math.abs(r.params.b ?? 0)))),
     },
   });
@@ -252,6 +300,13 @@ function misconceptions(rule, domain, rng) {
       add(idx(domain.values[V[2][2]] + 1), 'off-by-one', 'miscounts by one');
       add(idx(domain.values[V[2][2]] - 1), 'off-by-one', 'miscounts by one');
       add(isRow ? V[2][1] : V[1][2], isRow ? 'repeat-left' : 'repeat-above', `repeats the ${label} of the ${isRow ? 'cell to its left' : 'cell above'} instead of combining the two counts`);
+      break;
+    }
+    case 'coupled': {
+      const others = Object.values(p.map).filter((v) => v !== V[2][2]);
+      for (const o of others.slice(0, 2)) add(o, 'wrong-link', `pairs the ${label} with the wrong ${ATTR_LABEL[p.source]}: the link is fixed cell by cell`);
+      add(V[2][1], 'repeat-left', `repeats the ${label} of the cell to its left instead of following the link to the ${ATTR_LABEL[p.source]}`);
+      add(V[1][2], 'repeat-above', `repeats the ${label} of the cell above instead of following the link to the ${ATTR_LABEL[p.source]}`);
       break;
     }
     case 'latin':
@@ -409,19 +464,44 @@ function buildSetPuzzle(family, fam, difficulty, rng) {
   const op = fam.op;
   const palette = difficulty === 1 ? 'lines' : difficulty === 2 ? rng.pick(['lines', 'dots']) : 'dots';
   const orientation = difficulty === 1 ? 'row' : rng.pick(['row', 'col']);
-  const sizes = { 1: [2, 3], 2: [2, 4], 3: [3, 5], 4: [4, 6], 5: [5, 7] }[difficulty];
+  const sizes = { 1: [2, 3], 2: [2, 4], 3: [3, 5], 4: [4, 6], 5: [5, 7], 6: [5, 7] }[difficulty];
   const elements = SET_PALETTES[palette].elements;
-  const lines = [];
-  for (let i = 0; i < 3; i++) {
-    const pair = genPair(op, elements, sizes, rng);
-    if (!pair) return null;
-    lines.push(pair);
-  }
   const grid = [[null, null, null], [null, null, null], [null, null, null]];
-  for (let i = 0; i < 3; i++) {
-    const { A, B, C } = lines[i];
-    if (orientation === 'row') { grid[i][0] = A; grid[i][1] = B; grid[i][2] = C; }
-    else { grid[0][i] = A; grid[1][i] = B; grid[2][i] = C; }
+  let colOp = null;
+  if (difficulty >= 6 && ['union', 'intersection', 'xor'].includes(op)) {
+    // Two-way: rows combine by `op`, columns by a different operation, and the corner satisfies both.
+    const fns = setOpFns(palette);
+    colOp = rng.pick(['union', 'intersection', 'xor'].filter((o) => o !== op));
+    const R = fns[op], Cf = fns[colOp];
+    let found = null;
+    for (let tries = 0; tries < 200 && !found; tries++) {
+      const free = [0, 1, 2, 3].map(() => rng.sample(elements, rng.range(sizes[0] - 1, sizes[1] - 1)));
+      const [a, b, c, d] = free;
+      const g = [[a, b, R(a, b)], [c, d, R(c, d)], [Cf(a, c), Cf(b, d), null]];
+      const corner = R(g[2][0], g[2][1]);
+      if (!sameSet(corner, Cf(g[0][2], g[1][2]))) continue;
+      g[2][2] = corner;
+      const flat = g.flat();
+      if (flat.some((m) => !m.length)) continue;
+      if (sameSet(corner, g[2][0]) || sameSet(corner, g[2][1]) || sameSet(corner, g[0][2]) || sameSet(corner, g[1][2])) continue;
+      const keys = flat.map((m) => m.slice().sort().join(','));
+      if (new Set(keys).size < 7) continue;
+      found = g;
+    }
+    if (!found) return null;
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) grid[r][c] = found[r][c].slice().sort((x, y) => elements.indexOf(x) - elements.indexOf(y));
+  } else {
+    const lines = [];
+    for (let i = 0; i < 3; i++) {
+      const pair = genPair(op, elements, sizes, rng);
+      if (!pair) return null;
+      lines.push(pair);
+    }
+    for (let i = 0; i < 3; i++) {
+      const { A, B, C } = lines[i];
+      if (orientation === 'row') { grid[i][0] = A; grid[i][1] = B; grid[i][2] = C; }
+      else { grid[0][i] = A; grid[1][i] = B; grid[2][i] = C; }
+    }
   }
   const known = grid.map((row) => row.slice());
   known[2][2] = null;
@@ -430,20 +510,20 @@ function buildSetPuzzle(family, fam, difficulty, rng) {
   const cells = [];
   for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) cells.push(setCell(palette, grid[r][c]));
   const answer = cells[8];
-  const options = buildSetOptions(op, orientation, palette, grid, cells, rng, difficulty);
+  const options = buildSetOptions(op, colOp ? 'row' : orientation, palette, grid, cells, rng, difficulty);
   if (!options) return null;
   return finish({
     kind: 'set',
-    setRule: { op, orientation, palette, opLabel: OP_TEXT[op].name },
+    setRule: { op, orientation: colOp ? 'row' : orientation, palette, opLabel: OP_TEXT[op].name, colOp },
     rules: [],
     cells,
     options: options.cells,
     correctIndex: options.correctIndex,
     distractors: options.distractors,
-    explanation: explainSetPuzzle(op, orientation, palette, known, answer),
-    hints: setHints(op, orientation),
+    explanation: explainSetPuzzle(op, colOp ? 'row' : orientation, palette, known, answer, colOp),
+    hints: setHints(op, colOp ? 'row' : orientation, colOp),
     verification: { set: { predictions: preds.map((p) => ({ members: p.members, hypotheses: p.names })) } },
-    features: { ruleCount: 1, rules: [`set:${op}:${orientation}`], palette, paletteSize: elements.length, maxSetSize: sizes[1], orientation: orientation },
+    features: { ruleCount: colOp ? 2 : 1, rules: colOp ? [`set:${op}:row`, `set:${colOp}:col`] : [`set:${op}:${orientation}`], palette, paletteSize: elements.length, maxSetSize: sizes[1], orientation: colOp ? 'row' : orientation, twoWay: !!colOp },
   });
 }
 

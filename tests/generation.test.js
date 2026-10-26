@@ -12,7 +12,7 @@ const SEEDS = Number(process.env.SEEDS || 120);
 const seeds = Array.from({ length: SEEDS }, (_, i) => `seed-${i}`);
 
 for (const family of FAMILY_IDS) {
-  for (const difficulty of [1, 2, 3, 4, 5]) {
+  for (const difficulty of [1, 2, 3, 4, 5, 6]) {
     test(`${family} d${difficulty}: ${SEEDS} seeds generate, verify and reproduce`, () => {
       for (const seed of seeds) {
         const p = generatePuzzle({ family, difficulty, seed });
@@ -93,11 +93,13 @@ test('difficulty follows documented structural features', () => {
         assert.equal(p4.features.maxSetSize, 6);
         const p5 = generatePuzzle({ family, difficulty: 5, seed });
         assert.equal(p5.features.maxSetSize, 7);
+        const p6 = generatePuzzle({ family, difficulty: 6, seed });
+        if (['union', 'intersection', 'xor'].includes(family)) assert.equal(p6.features.twoWay, true, 'two-way at level 6');
       }
     } else {
       for (const seed of seeds.slice(0, 20)) {
-        const expect = family === 'combination' ? { 1: 2, 2: 3, 3: 3, 4: 4, 5: 5 } : { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5 };
-        for (const d of [1, 2, 3, 4, 5]) {
+        const expect = family === 'combination' ? { 1: 2, 2: 3, 3: 3, 4: 4, 5: 5, 6: 5 } : { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 5 };
+        for (const d of [1, 2, 3, 4, 5, 6]) {
           const p = generatePuzzle({ family, difficulty: d, seed });
           assert.equal(p.features.ruleCount, expect[d], `${family} d${d} rule count`);
         }
@@ -110,7 +112,7 @@ test('inner shapes and count arithmetic only appear from level 3 and stay well-f
   let inner = 0, arith = 0;
   for (const family of FAMILY_IDS) {
     if (FAMILIES[family].kind === 'set') continue;
-    for (const d of [1, 2, 3, 4, 5]) for (const seed of seeds.slice(0, 40)) {
+    for (const d of [1, 2, 3, 4, 5, 6]) for (const seed of seeds.slice(0, 40)) {
       const p = generatePuzzle({ family, difficulty: d, seed });
       if (p.features.inner) inner++;
       if (p.features.arithmetic) arith++;
@@ -124,6 +126,16 @@ test('inner shapes and count arithmetic only appear from level 3 and stay well-f
     }
   }
   assert.ok(inner > 0 && arith > 0, 'both features occur');
+});
+
+test('level 6 figure puzzles couple one attribute to another', () => {
+  for (const family of ['rotation', 'fill', 'combination', 'cyclic']) for (const seed of seeds.slice(0, 30)) {
+    const p = generatePuzzle({ family, difficulty: 6, seed });
+    assert.equal(p.features.coupled, true, `${p.id} has a coupled rule`);
+    const r = p.rules.find((x) => x.type === 'coupled');
+    assert.ok(r && r.params.source && Object.keys(r.params.map).length >= 2);
+    assert.ok(p.explanation.rows.some((s) => s.includes('tied to')));
+  }
 });
 
 test('D8 orientation arithmetic and canonical forms', () => {

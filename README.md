@@ -79,5 +79,13 @@ publisher's adaptive algorithm, item bank, timing, scoring or norms.
 Five structural levels: Basic (one rule), Intermediate (two), Advanced (three, with count arithmetic and
 inner shapes entering the pool), Expert (four rules changing at once; set puzzles with up to six elements) and
 Master (five rules at once, complement set operations, two-level series, three-premise logic, compound
-arithmetic, rare vocabulary and reversed analogies).
+arithmetic, rare vocabulary and reversed analogies) and Grandmaster (an attribute coupled to another attribute,
+and set puzzles with different operations along rows and columns). Non-matrix questions share their hardest
+forms between levels 5 and 6.
+
+## Sections
+
+Five sections: **Learn** (the intro), **Practise** (any question type and level, hints on or off),
+**Test** (mock test, adaptive challenge or timed drill behind one switcher), **Results** (progress, mistakes,
+past reports) and **Settings**. Older routes (`#/guided`, `#/review`, `#/progress`) redirect.
 See `docs/RULES.md` for the exact definitions.

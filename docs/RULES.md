@@ -31,6 +31,7 @@ Each attribute of a figure puzzle follows exactly one of these rules:
 | rowAlt | across each row the value alternates A, B, A; every row is identical |
 | colAlt | down each column the value alternates A, B, A |
 | checker | A and B alternate in a checkerboard |
+| coupled | (level 6) the attribute is a function of another attribute's value in the same cell |
 | rowSum / colSum | (number of shapes, level 3+) the third cell of each row / column holds the first count plus the second |
 | rowDiff / colDiff | (number of shapes, level 3+) the third cell holds the first count minus the second |
 
@@ -78,6 +79,7 @@ population, does not estimate IQ or percentiles, and is not comparable with any 
 | 3 Advanced | core rule + 2 independent rules; rotation steps up to 135°; count arithmetic and inner shapes enter the pool | 3 rules, the first of which is a two-direction rule (grid or latin) | "dots" palette (9 elements), sets of 3–5, rows or columns |
 | 4 Expert | core rule + 3 independent rules (four attributes change at once) | 4 rules, the first of which is a two-direction rule | "dots" palette, sets of 4–6, rows or columns |
 | 5 Master | core rule + 4 independent rules (five attributes change at once, inner shapes and count arithmetic in the pool) | 5 rules, the first of which is a two-direction rule | "dots" palette, sets of 5–7, the "neither" (complement of the union) operation in the pool, and distractors that are mostly one-element near misses |
+| 6 Grandmaster | five rules of which one is **coupled**: an attribute follows no row or column pattern of its own but is a fixed function of another attribute (e.g. small → solid, medium → hollow, large → striped) | 5 rules including a coupled one | union, intersection and exclusive-or puzzles become **two-way**: rows combine by one operation and columns by a different one, and the corner satisfies both; other set families as level 5 |
 
 `puzzle.features` records the actual rule count, the rule types, whether a two-direction rule is present and
 the largest step, so the UI and the tests can check the level against these definitions.
@@ -114,7 +116,8 @@ For every generated puzzle:
    the generator's grammar are enumerated too, so puzzles that admit them are rejected: a line that stays
    constant, "one of each" along rows only or columns only, "third = first + second", "first − second" and
    "|first − second|" for the number of shapes, row 3 copying row 1 or 2, column 3 copying column 1 or 2, and
-   constant diagonals.
+   constant diagonals, and coupled readings (an attribute determined by another attribute that has a unique
+   reading of its own, with the gap's source value already seen among the eight cells).
 2. **Visually distinct options.** Options are compared after canonicalising orientation by each shape's
    symmetry group, so two options can never render identically.
 3. **Distractors are misconceptions.** Each wrong option is built from one or two named mistakes (repeat the

@@ -222,9 +222,30 @@ function evaluateFigureOption(cells, option) {
   const opt = observeFigure(option);
   const attrs = {};
   let strongAttrs = 0, anyAttrs = 0, total = 0;
+  const grids = {};
+  for (const attr of FIGURE_ATTRS) grids[attr] = completedGrid(obs.map((o) => o[attr]), opt[attr]);
+  // Independent readings first; a coupled reading may only lean on an attribute that stands on its own.
+  const base = {};
+  for (const attr of FIGURE_ATTRS) base[attr] = figurePatterns(grids[attr], FIGURE_META[attr]);
   for (const attr of FIGURE_ATTRS) {
-    const grid = completedGrid(obs.map((o) => o[attr]), opt[attr]);
-    const pats = figurePatterns(grid, FIGURE_META[attr]);
+    const grid = grids[attr];
+    const pats = base[attr].slice();
+    // Coupled reading: this attribute is a function of another, independently patterned attribute with 2–3 values.
+    const flatB = grid.flat();
+    if (new Set(flatB.filter((v) => v !== null)).size > 1) {
+      for (const other of FIGURE_ATTRS) {
+        if (other === attr || !base[other].some((p) => p.strong)) continue;
+        const flatA = grids[other].flat();
+        const distinct = new Set(flatA.filter((v) => v !== null));
+        if (distinct.size < 2 || distinct.size > 3) continue;
+        // The link must be fixed by the eight visible cells; the gap may not introduce a new source value.
+        const map = new Map();
+        let ok = true;
+        for (let i = 0; i < 8; i++) { const a = flatA[i], b = flatB[i]; if (a === null || b === null) continue; if (map.has(a) && map.get(a) !== b) { ok = false; break; } map.set(a, b); }
+        const aGap = flatA[8], bGap = flatB[8];
+        if (ok && map.size >= 2 && aGap !== null && bGap !== null && map.has(aGap) && map.get(aGap) === bGap) pats.push({ name: `coupled:${other}`, strong: true });
+      }
+    }
     attrs[attr] = pats;
     if (pats.some((p) => p.strong)) strongAttrs++;
     if (pats.length) anyAttrs++;

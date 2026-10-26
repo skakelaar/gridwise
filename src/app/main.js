@@ -33,16 +33,20 @@ function navigate(hash, { replace = false } = {}) {
 const ROUTES = {
   '': showHome,
   intro: showIntro,
-  guided: () => showPractice('guided'),
-  practice: () => showPractice('untimed'),
+  practice: () => showPractice(),
+  guided: () => { storage.saveSettings({ practiceHints: true }); navigate('#/practice', { replace: true }); },
+  test: () => navigate(`#/${storage.loadSettings().testFormat || 'mock'}`, { replace: true }),
   timed: showTimed,
-  review: showReview,
-  progress: showProgress,
-  settings: showSettings,
-  about: showAbout,
   challenge: showChallenge,
   mock: showMock,
+  results: showResults,
+  review: (parts) => (parts[0] ? showReviewPuzzle(parts[0]) : navigate('#/results/mistakes', { replace: true })),
+  progress: () => navigate('#/results', { replace: true }),
+  settings: showSettings,
+  about: showAbout,
 };
+// Which nav entry a route belongs to.
+const NAV_SECTION = { intro: 'intro', practice: 'practice', guided: 'practice', test: 'test', timed: 'test', challenge: 'test', mock: 'test', results: 'results', review: 'results', progress: 'results', settings: 'settings' };
 
 let teardown = null; // cleanup for the active screen (timers, listeners)
 
@@ -60,7 +64,7 @@ function updateNav() {
   const top = parseHash()[0] || '';
   nav.querySelectorAll('a').forEach((a) => {
     const target = a.getAttribute('href').replace(/^#\/?/, '').split('/')[0];
-    const active = target === top;
+    const active = target === (NAV_SECTION[top] || top);
     if (active) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
   });
@@ -128,8 +132,9 @@ function showAbout() {
 
 const practiceSessions = { guided: null, untimed: null };
 
-function showPractice(mode) {
+function showPractice() {
   const settings = storage.loadSettings();
+  const mode = settings.practiceHints === false ? 'untimed' : 'guided';
   let current = practiceSessions[mode];
   if (!current) current = practiceSessions[mode] = newPracticePuzzle(mode, settings);
   renderPractice(mode, current, { focus: 'title' });
@@ -163,6 +168,15 @@ function renderPractice(mode, s, { focus } = {}) {
       if (v !== 'mixed') storage.saveAdaptive({ ...storage.DEFAULT_ADAPTIVE, level: Number(v) });
       restart();
     },
+    onHints: (on) => {
+      // Keep the current puzzle; just switch the help on or off.
+      storage.saveSettings({ practiceHints: !!on });
+      const newMode = on ? 'guided' : 'untimed';
+      practiceSessions[newMode] = s;
+      s.mode = newMode;
+      renderPractice(newMode, s, { focus: 'hints' });
+      ui.announce(on ? 'Hints switched on.' : 'Hints switched off.');
+    },
   });
   const handlers = {
     onSelect: (i) => { session.selectOption(s, i); ui.setSelectedOption(app, s.selected); },
@@ -195,7 +209,7 @@ function renderPractice(mode, s, { focus } = {}) {
   const model = {
     puzzle: s.puzzle,
     mode,
-    heading: mode === 'guided' ? 'Guided practice' : 'Untimed practice',
+    heading: 'Practise',
     selected: s.selected,
     answered: s.answered,
     revealed: s.revealed,
@@ -206,6 +220,7 @@ function renderPractice(mode, s, { focus } = {}) {
   mount(ui.renderPuzzleScreen(model, handlers), { title: model.heading, focusTitle: focus === 'title' });
   if (focus === 'feedback') ui.focusEl(document.getElementById('feedback-title'));
   if (focus === 'hint') ui.focusEl(document.getElementById('hint-btn') || document.getElementById('reveal-btn'));
+  if (focus === 'hints') ui.focusEl(document.getElementById('hints-toggle'));
   installNumberKeys(() => (s.answered || s.revealed ? null : { select: handlers.onSelect }));
 }
 
@@ -240,6 +255,7 @@ function showTimed(parts) {
     persistTimed();
   }
   const settings = storage.loadSettings();
+  storage.saveSettings({ testFormat: 'timed' });
   mount(ui.renderTimedSetup({ settings, resumable }, {
     onStart: ({ count, minutes, family, difficulty }) => {
       storage.saveSettings({ timedCount: count, timedMinutes: minutes, timedFamily: family, timedDifficulty: difficulty });
@@ -380,6 +396,7 @@ function showChallenge(parts) {
   if (sub === 'report') return showChallengeReport(parts[1]);
   const existing = settleChallenge(loadChallenge());
   const resumable = existing && !existing.finished ? existing : null;
+  storage.saveSettings({ testFormat: 'challenge' });
   mount(ui.renderChallengeSetup({ resumable, history: storage.loadChallengeHistory() }, {
     onStart: (format) => { chal = challenge.createChallenge({ format }); persistChallenge(); navigate('#/challenge/run'); },
     onResume: () => navigate('#/challenge/run'),
@@ -509,6 +526,7 @@ function showMock(parts) {
   const existing = settleMock(loadMock());
   const resumable = existing && !existing.finished ? existing : null;
   const settings = storage.loadSettings();
+  storage.saveSettings({ testFormat: 'mock' });
   mount(ui.renderMockSetup({ settings, resumable, history: storage.loadMockHistory() }, {
     onStart: ({ count, minutes, tier }) => {
       storage.saveSettings({ mockCount: count, mockMinutes: minutes, mockTier: tier });
@@ -600,15 +618,6 @@ function sortedMistakes() {
   return storage.loadMistakes().slice().sort((a, b) => String(b.at).localeCompare(String(a.at)));
 }
 
-function showReview(parts) {
-  const id = parts[0];
-  if (id) return showReviewPuzzle(id);
-  const render = () => mount(ui.renderReviewList({ mistakes: sortedMistakes() }, {
-    onUnderstood: (puzzleId) => { storage.removeMistake(puzzleId); render(); ui.announce('Marked as understood and removed from the list.'); },
-  }), { title: 'Mistake review' });
-  render();
-}
-
 function showReviewPuzzle(puzzleId) {
   const mistake = storage.findMistake(puzzleId);
   if (!mistake) return mount(ui.renderError('That mistake is no longer in your list (it may have been marked as understood).'), { title: 'Mistake review' });
@@ -632,7 +641,7 @@ function showReviewPuzzle(puzzleId) {
       },
       onReveal: () => { session.revealSolution(s); render({ focus: 'feedback' }); ui.announce(`Solution revealed. The correct answer is option ${s.puzzle.correctIndex + 1}.`); },
       onNext: () => { s = session.startPuzzle({ mode: 'review', spec, original: mistake }); render({ focus: 'title' }); ui.announce('Puzzle reset.'); },
-      onUnderstood: () => { storage.removeMistake(puzzleId); navigate('#/review'); ui.announce('Marked as understood.'); },
+      onUnderstood: () => { storage.removeMistake(puzzleId); navigate('#/results/mistakes'); ui.announce('Marked as understood.'); },
     };
     const model = {
       puzzle: s.puzzle,
@@ -655,9 +664,19 @@ function showReviewPuzzle(puzzleId) {
 
 // ---------------------------------------------------------------- progress / settings
 
-function showProgress() {
+function showResults(parts) {
+  const tab = parts[0] || 'progress';
+  if (tab === 'mistakes') {
+    const render = () => mount(ui.renderResults({ tab, body: ui.renderReviewList({ mistakes: sortedMistakes(), embedded: true }, {
+      onUnderstood: (puzzleId) => { storage.removeMistake(puzzleId); render(); ui.announce('Marked as understood and removed from the list.'); },
+    }) }), { title: 'Results – mistakes' });
+    return render();
+  }
+  if (tab === 'reports') {
+    return mount(ui.renderResults({ tab, body: ui.renderReportsList({ challenges: storage.loadChallengeHistory(), mocks: storage.loadMockHistory() }) }), { title: 'Results – reports' });
+  }
   const attempts = storage.loadAttempts();
-  mount(ui.renderProgress({ overall: summarise(attempts), groups: byGroup(attempts), difficulties: byDifficulty(attempts) }), { title: 'Progress' });
+  mount(ui.renderResults({ tab: 'progress', body: ui.renderProgress({ overall: summarise(attempts), groups: byGroup(attempts), difficulties: byDifficulty(attempts), embedded: true }) }), { title: 'Results – progress' });
 }
 
 function showSettings() {

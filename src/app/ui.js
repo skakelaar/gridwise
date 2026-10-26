@@ -95,8 +95,8 @@ export function familySelect({ id, value, onChange }) {
 
 export function difficultySelect({ id, value, onChange }) {
   const sel = h('select', { id, class: 'select', onChange: (e) => onChange(e.target.value) });
-  sel.appendChild(h('option', { value: 'mixed' }, 'Mixed (1–5)'));
-  for (const d of [1, 2, 3, 4, 5]) sel.appendChild(h('option', { value: String(d) }, `${d} – ${DIFFICULTY_LABELS[d]}`));
+  sel.appendChild(h('option', { value: 'mixed' }, 'Mixed (1–6)'));
+  for (const d of [1, 2, 3, 4, 5, 6]) sel.appendChild(h('option', { value: String(d) }, `${d} – ${DIFFICULTY_LABELS[d]}`));
   sel.value = String(value ?? 'mixed');
   return sel;
 }
@@ -105,15 +105,10 @@ export function difficultySelect({ id, value, onChange }) {
 
 export function renderHome({ samplePuzzle }) {
   const cards = [
-    { href: '#/intro', title: 'Learn the basics', blurb: 'A short, skimmable introduction to how the puzzles work.' },
-    { href: '#/guided', title: PRACTICE_MODES.guided.title, blurb: PRACTICE_MODES.guided.blurb },
-    { href: '#/practice', title: PRACTICE_MODES.untimed.title, blurb: PRACTICE_MODES.untimed.blurb },
-    { href: '#/timed', title: PRACTICE_MODES.timed.title, blurb: PRACTICE_MODES.timed.blurb },
-    { href: '#/challenge', title: PRACTICE_MODES.challenge.title, blurb: PRACTICE_MODES.challenge.blurb },
-    { href: '#/mock', title: PRACTICE_MODES.mock.title, blurb: PRACTICE_MODES.mock.blurb },
-    { href: '#/review', title: PRACTICE_MODES.review.title, blurb: PRACTICE_MODES.review.blurb },
-    { href: '#/progress', title: 'Progress', blurb: 'Accuracy and response times by rule group and difficulty.' },
-    { href: '#/settings', title: 'Settings and reset', blurb: 'Practice personalisation and clearing local data.' },
+    { href: '#/intro', title: 'Learn', blurb: 'A short, skimmable introduction to reading rows, columns and rules, with worked examples.' },
+    { href: '#/practice', title: 'Practise', blurb: 'Any question type, any of six levels, at your own pace. Hints on or off; a full explanation after every answer.' },
+    { href: '#/test', title: 'Test', blurb: 'Three formats: a mock test on one clock, an adaptive challenge that steps up and down with you, or a quick timed drill.' },
+    { href: '#/results', title: 'Results', blurb: 'Progress by rule group and level, your mistakes to retry, and every past test report.' },
   ];
   return h('section', { class: 'screen home' },
     h('div', { class: 'hero' },
@@ -122,8 +117,8 @@ export function renderHome({ samplePuzzle }) {
         h('p', { class: 'pitch' }, 'Practise 3×3 abstract matrix puzzles and learn the rule behind every answer, with an explanation after each one.'),
         h('p', { class: 'notice', id: 'independence-notice' }, INDEPENDENCE_NOTICE),
         h('div', { class: 'hero-actions' },
-          link('#/guided', 'Start practising', 'btn btn-primary btn-lg'),
-          link('#/intro', 'Learn the basics', 'btn'),
+          link('#/practice', 'Start practising', 'btn btn-primary btn-lg'),
+          link('#/test', 'Take a test', 'btn btn-lg'),
         ),
       ),
       h('figure', { class: 'sample' },
@@ -131,7 +126,7 @@ export function renderHome({ samplePuzzle }) {
         h('figcaption', null, `Sample puzzle: ${samplePuzzle.familyLabel}, ${samplePuzzle.difficultyLabel.toLowerCase()}. Which figure fills the gap?`),
       ),
     ),
-    h('nav', { class: 'mode-grid', 'aria-label': 'Practice modes' },
+    h('nav', { class: 'mode-grid mode-grid-4', 'aria-label': 'Sections' },
       cards.map((c) => h('a', { class: 'card', href: c.href },
         h('span', { class: 'card-title' }, c.title),
         h('span', { class: 'card-blurb' }, c.blurb),
@@ -159,7 +154,7 @@ export function renderIntro({ examples }) {
       )),
     ),
     h('div', { class: 'actions' },
-      link('#/guided', 'Start guided practice', 'btn btn-primary'),
+      link('#/practice', 'Start practising', 'btn btn-primary'),
       link('#/', 'Back to home', 'btn'),
     ),
   );
@@ -167,15 +162,22 @@ export function renderIntro({ examples }) {
 
 // ---------------------------------------------------------------- practice settings bar
 
-export function renderPracticeBar({ settings, adaptive, onFamily, onDifficulty }) {
+export function renderPracticeBar({ settings, adaptive, onFamily, onDifficulty, onHints }) {
   const bar = h('form', { class: 'practice-bar', onSubmit: (e) => e.preventDefault() },
     h('div', { class: 'field' },
-      h('label', { for: 'family-filter' }, 'Family'),
+      h('label', { for: 'family-filter' }, 'Question type'),
       familySelect({ id: 'family-filter', value: settings.practiceFamily, onChange: onFamily }),
     ),
     h('div', { class: 'field' },
-      h('label', { for: 'difficulty-filter' }, settings.personalise ? 'Starting level' : 'Difficulty'),
+      h('label', { for: 'difficulty-filter' }, settings.personalise ? 'Starting level' : 'Level'),
       difficultySelect({ id: 'difficulty-filter', value: settings.practiceDifficulty, onChange: onDifficulty }),
+    ),
+    h('div', { class: 'field field-check' },
+      h('span', { class: 'field-label-text', 'aria-hidden': 'true' }, 'Help'),
+      h('label', { class: 'check-inline', for: 'hints-toggle' },
+        h('input', { type: 'checkbox', id: 'hints-toggle', checked: settings.practiceHints !== false ? '' : null, onChange: (e) => onHints(e.target.checked) }),
+        ' Hints',
+      ),
     ),
   );
   if (settings.personalise) {
@@ -383,7 +385,7 @@ function feedbackPanel(model, handlers) {
   if (model.mode === 'review') {
     actions.appendChild(h('button', { type: 'button', class: 'btn btn-primary', onClick: handlers.onUnderstood }, 'Mark as understood'));
     actions.appendChild(h('button', { type: 'button', class: 'btn', onClick: handlers.onNext }, 'Try again from scratch'));
-    actions.appendChild(link('#/review', 'Back to mistake list'));
+    actions.appendChild(link('#/results/mistakes', 'Back to mistake list'));
   } else if (model.mode === 'summary') {
     actions.appendChild(link('#/timed/summary', 'Back to session summary', 'btn btn-primary'));
     if (model.prevHref) actions.appendChild(link(model.prevHref, 'Previous puzzle'));
@@ -503,6 +505,53 @@ export function renderPrompt(puzzle) {
   );
 }
 
+// ---------------------------------------------------------------- section switchers
+
+/** Segmented control shown on every test-format screen. */
+export function testSwitcher(current) {
+  const items = [
+    ['mock', '#/mock', 'Mock test', 'Fixed set, one clock, answer in any order'],
+    ['challenge', '#/challenge', 'Adaptive challenge', 'One clock per question, level steps up and down'],
+    ['timed', '#/timed', 'Timed drill', 'Pick a count and a time limit, review at the end'],
+  ];
+  return h('nav', { class: 'switcher', 'aria-label': 'Test format' },
+    items.map(([id, href, label, blurb]) => h('a', { href, class: `switcher-item${id === current ? ' is-current' : ''}`, 'aria-current': id === current ? 'page' : null },
+      h('span', { class: 'switcher-label' }, label),
+      h('span', { class: 'switcher-blurb' }, blurb),
+    )),
+  );
+}
+
+export function resultsTabs(current) {
+  const items = [['progress', '#/results', 'Progress'], ['mistakes', '#/results/mistakes', 'Mistakes'], ['reports', '#/results/reports', 'Reports']];
+  return h('nav', { class: 'tabs', 'aria-label': 'Results sections' },
+    items.map(([id, href, label]) => h('a', { href, class: `tab${id === current ? ' is-current' : ''}`, 'aria-current': id === current ? 'page' : null }, label)),
+  );
+}
+
+export function renderResults({ tab, body }) {
+  return h('section', { class: 'screen results' },
+    screenTitle('Results'),
+    resultsTabs(tab),
+    body,
+  );
+}
+
+export function renderReportsList({ challenges, mocks }) {
+  const rows = [
+    ...challenges.map((c) => ({ at: c.startedAt, href: `#/challenge/report/${c.id}`, title: `Adaptive challenge · ${(CHALLENGE_FORMATS[c.format] || CHALLENGE_FORMATS.matrix).label}`, score: `${c.items.filter((i) => i.correct).length} / ${c.items.length}` })),
+    ...mocks.map((m) => ({ at: m.startedAt, href: `#/mock/report/${m.id}`, title: `Mock test · ${(MOCK_TIERS[m.tier] || MOCK_TIERS.mixed).label} · ${m.items.length} in ${m.minutes} min`, score: `${m.items.filter((i) => i.correct).length} / ${m.items.length}` })),
+  ].sort((a, b) => b.at - a.at);
+  if (!rows.length) return h('div', null, h('p', { class: 'empty' }, 'No test reports yet. Reports from mock tests and adaptive challenges appear here.'), h('p', null, link('#/test', 'Take a test', 'btn btn-primary')));
+  return h('ul', { class: 'mistake-list' }, rows.map((r) => h('li', { class: 'mistake report-row' },
+    h('div', { class: 'mistake-text' },
+      h('span', { class: 'mistake-title' }, `${r.score} correct`),
+      h('span', { class: 'mistake-meta' }, `${r.title} · ${formatDate(new Date(r.at).toISOString())}`),
+    ),
+    h('div', { class: 'mistake-actions' }, h('a', { class: 'btn btn-small', href: r.href }, 'Open report')),
+  )));
+}
+
 // ---------------------------------------------------------------- timed setup and summary
 
 export function renderTimedSetup({ settings, resumable }, handlers) {
@@ -543,7 +592,9 @@ export function renderTimedSetup({ settings, resumable }, handlers) {
     ),
   );
   const screen = h('section', { class: 'screen timed-setup' },
-    screenTitle('Timed session'),
+    screenTitle('Test'),
+    testSwitcher('timed'),
+    h('h2', null, 'Timed drill'),
     h('p', { class: 'lead' }, 'Answer as many puzzles as you can before the clock runs out. Feedback and explanations are shown in the summary at the end; unanswered puzzles count as unanswered, not as wrong.'),
   );
   if (resumable) {
@@ -591,7 +642,7 @@ export function renderTimedSummary({ session, summary }) {
     ),
     h('div', { class: 'actions' },
       link('#/timed', 'New timed session', 'btn btn-primary'),
-      link('#/progress', 'See progress'),
+      link('#/results', 'See progress'),
       link('#/', 'Home'),
     ),
   );
@@ -607,14 +658,14 @@ function statTile(label, value, sub) {
 
 // ---------------------------------------------------------------- mistake review list
 
-export function renderReviewList({ mistakes }, handlers) {
+export function renderReviewList({ mistakes, embedded = false }, handlers) {
   const screen = h('section', { class: 'screen review-list' },
-    screenTitle('Mistake review'),
+    embedded ? null : screenTitle('Mistake review'),
     h('p', { class: 'lead' }, 'Puzzles you answered incorrectly, most recent first. Each one is regenerated from its seed, so you can retry it, then read the explanation and see why your earlier choice was tempting.'),
   );
   if (!mistakes.length) {
     screen.appendChild(h('p', { class: 'empty' }, 'No mistakes stored yet. Mistakes from any mode appear here automatically.'));
-    screen.appendChild(h('div', { class: 'actions' }, link('#/guided', 'Start practising', 'btn btn-primary'), link('#/', 'Home')));
+    screen.appendChild(h('div', { class: 'actions' }, link('#/practice', 'Start practising', 'btn btn-primary'), link('#/', 'Home')));
     return screen;
   }
   screen.appendChild(h('ul', { class: 'mistake-list' },
@@ -653,9 +704,9 @@ function statsTable(caption, rows) {
   );
 }
 
-export function renderProgress({ overall, groups, difficulties }) {
+export function renderProgress({ overall, groups, difficulties, embedded = false }) {
   return h('section', { class: 'screen progress' },
-    screenTitle('Progress'),
+    embedded ? null : screenTitle('Progress'),
     h('p', { class: 'lead caveat' }, STATS_CAVEAT, ` Rows with fewer than ${SMALL_SAMPLE} attempts are marked “small sample”.`),
     h('div', { class: 'stat-tiles' },
       statTile('Attempted', String(overall.attempted), overall.smallSample ? 'small sample' : ''),
@@ -664,7 +715,7 @@ export function renderProgress({ overall, groups, difficulties }) {
     ),
     statsTable('By rule group', groups),
     statsTable('By difficulty', difficulties),
-    h('div', { class: 'actions' }, link('#/guided', 'Practise more', 'btn btn-primary'), link('#/', 'Home')),
+    h('div', { class: 'actions' }, link('#/practice', 'Practise more', 'btn btn-primary'), link('#/', 'Home')),
   );
 }
 
@@ -741,7 +792,9 @@ export { describeFilter, PRODUCT_NAME };
 export function renderChallengeSetup({ resumable, history }, handlers) {
   const past = history.slice().reverse();
   return h('section', { class: 'screen challenge-setup' },
-    screenTitle('Challenge'),
+    screenTitle('Test'),
+    testSwitcher('challenge'),
+    h('h2', null, 'Adaptive challenge'),
     h('p', { class: 'lead' }, 'A fixed number of questions, each on its own clock. The difficulty follows your answers, and at the end you get an assessment, a memorandum of every answer, and a full explanation of each question.'),
     h('div', { class: 'notice' }, h('p', null, CHALLENGE_NOTE)),
     h('fieldset', null,
@@ -905,8 +958,8 @@ export function renderChallengeReport({ challenge, report, puzzles }) {
     })),
     h('div', { class: 'actions' },
       link(isMock ? '#/mock' : '#/challenge', isMock ? 'New mock test' : 'New challenge', 'btn btn-primary'),
-      link('#/review', 'Mistake review'),
-      link('#/progress', 'See progress'),
+      link('#/results/mistakes', 'Mistake review'),
+      link('#/results', 'See progress'),
       link('#/', 'Home'),
     ),
   );
@@ -934,9 +987,11 @@ export function renderMockSetup({ settings, resumable, history }, handlers) {
     ),
   );
   return h('section', { class: 'screen mock-setup' },
-    screenTitle('Mock test'),
+    screenTitle('Test'),
+    testSwitcher('mock'),
+    h('h2', null, 'Mock test'),
     h('p', { class: 'lead' }, 'Answer in any order on one overall clock: move back and forth, save questions for later, change your mind, then press "I am finished". The report shows every answer with its explanation.'),
-    h('div', { class: 'notice' }, h('p', null, CHALLENGE_NOTE.replace('This challenge', 'This mock test'))),
+    h('div', { class: 'notice' }, h('p', null, CHALLENGE_NOTE.replace('This challenge', 'This mock test').replace('The up-and-down difficulty rule is stated in full below; it', 'It'))),
     resumable
       ? h('div', { class: 'banner' },
           h('p', null, h('strong', null, 'A mock test is in progress. '), `${resumable.items.filter((i) => i.chosenIndex != null).length} of ${resumable.items.length} answered.`),

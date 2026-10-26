@@ -149,7 +149,7 @@ const t0 = Date.now();
 for (const family of FAMILY_IDS) {
   codeDist[family] = {};
   majority[family] = { hit: 0, n: 0 };
-  for (const difficulty of [1, 2, 3, 4, 5]) {
+  for (const difficulty of [1, 2, 3, 4, 5, 6]) {
     let agree = 0, amb = 0, weak = 0, notStrong = 0, conf = 0;
     for (const seed of seeds) {
       const p = generatePuzzle({ family, difficulty, seed });

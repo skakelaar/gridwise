@@ -102,6 +102,18 @@ discarded a session.
   odd-one-out sets.
 * All sweeps run over levels 1–5 (matrix QA sweep: 15 families × 5 levels × 300 seeds).
 
+## Grandmaster level and consolidated navigation (added 2026-10-26)
+
+* Coupled attribute rules: generated at level 6, verified by both solvers with the rule that a coupling may only
+  lean on an attribute with an independent reading and must be fixed by the eight visible cells. The first QA
+  sweep caught a mutual-coupling loophole (two attributes each "explained" by the other) which is now closed.
+* Two-way set puzzles (different operations along rows and columns, corner satisfying both) are found by search
+  and verified by the existing operation hypotheses; a test asserts every union/intersection/xor puzzle at
+  level 6 is two-way.
+* Navigation consolidated to Learn / Practise / Test / Results / Settings; hints are a toggle inside Practise;
+  the three test formats share a switcher; Results has Progress, Mistakes and Reports tabs; old routes redirect.
+  Checked in the browser at desktop and 375 px (no horizontal overflow) after a spacing pass.
+
 ## Not verified
 
 * Real screen-reader output (ARIA roles, labels and live regions were checked in the DOM only).
