@@ -76,6 +76,8 @@ publisher's adaptive algorithm, item bank, timing, scoring or norms.
 
 ## Difficulty levels
 
-Four structural levels: Basic (one rule), Intermediate (two), Advanced (three, with count arithmetic and
-inner shapes entering the pool) and Expert (four rules changing at once; set puzzles with up to six elements).
+Five structural levels: Basic (one rule), Intermediate (two), Advanced (three, with count arithmetic and
+inner shapes entering the pool), Expert (four rules changing at once; set puzzles with up to six elements) and
+Master (five rules at once, complement set operations, two-level series, three-premise logic, compound
+arithmetic, rare vocabulary and reversed analogies).
 See `docs/RULES.md` for the exact definitions.

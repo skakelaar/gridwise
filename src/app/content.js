@@ -129,7 +129,7 @@ export const PERSONALISATION_NOTE =
 export const LIMITATIONS = [
   'Number series, logical deduction, arithmetic and analogy questions are original and generated from a small set of templates and a curated English word bank; they are practice in those formats, not a reconstruction of any published test\'s items.',
   'The 12-in-12 challenge uses a simple, stated up-and-down difficulty rule; it is not the adaptive procedure of any published test and its report is not an official or comparable score.',
-  'Level 4 (Expert) stacks four independent rules and adds inner shapes and count arithmetic; it is harder by construction, not by any measured norm.',
+  'Levels 4 (Expert) and 5 (Master) stack four and five independent rules, add inner shapes, count arithmetic, complement set operations, two-level number series, three-premise logic and an advanced vocabulary band; they are harder by construction, not by any measured norm.',
   'Each puzzle is checked to have exactly one answer within the supported rule grammar (progressions, alternations, one-of-each layouts and set operations), not against every pattern a person might imagine.',
   'Difficulty levels are structural: they count the rules in play, whether rules run in both directions, the step size and the size of the element palette. They are not psychometrically calibrated.',
   'The app never produces an IQ, a percentile or any score meant to be equivalent to an official test.',

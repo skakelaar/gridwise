@@ -7,7 +7,9 @@ export const SERIES_RULES = {
   2: ['fib', 'altOps', 'squares', 'squaresPlus', 'letters', 'cubes'],
   3: ['interleaved', 'pairwise', 'altAddSub', 'primes', 'lettersGrowing'],
   4: ['exponentPairs', 'secondDiff', 'linearRec', 'triMix', 'letterPairs'],
+  5: ['squareDiffs', 'primeDiffs', 'digitSum', 'tripleInterleave', 'recur2', 'letterSquares'],
 };
+const digitSum = (n) => String(n).split('').reduce((s, d) => s + Number(d), 0);
 
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const L = (n) => LETTERS[n - 1];
@@ -46,6 +48,18 @@ function build(rule, rng) {
     case 'lettersGrowing': { const a = rng.range(1, 3), s = rng.range(1, 2); const nums = [a]; for (let i = 1; i < 6; i++) nums.push(nums[i - 1] + s + i - 1); if (nums[5] > 26) return null; return { terms: nums.slice(0, 5).map(L), next: L(nums[5]), textual: true, how: `the gaps between the letters grow by one each time (+${s}, +${s + 1}, +${s + 2} …)`, misc: [L(nums[5] - 1), L(nums[5] + 1), L(nums[4] + (nums[4] - nums[3])), L(nums[5] + 2)].filter((x) => x), numeric: nums.slice(0, 5), nextNumeric: nums[5] }; }
     case 'letterPairs': { const a = rng.range(1, 4), d = rng.range(2, 3), b = 26 - rng.range(0, 3); const terms = []; for (let i = 0; i < 4; i++) terms.push(`${L(a + i * d)}${L(b - i * 2)}`); const nb = a + 4 * d, ne = b - 8; if (nb > 26 || ne < 1) return null; return { terms, next: `${L(nb)}${L(ne)}`, textual: true, how: `two letter series run together: the first letter moves ${d} places forward, the second moves 2 places back`, misc: [`${L(nb)}${L(ne + 1)}`, `${L(nb - 1)}${L(ne)}`, `${L(nb + 1)}${L(ne - 1)}`, `${L(nb)}${L(ne - 1)}`], numeric: range(4).map((i) => a + i * d), nextNumeric: nb, numeric2: range(4).map((i) => b - i * 2), nextNumeric2: ne }; }
     case 'triMix': { const a = rng.range(2, 5), k = rng.range(1, 3); const t = [a]; for (let i = 1; i < 6; i++) t.push(i % 2 ? t[i - 1] * 3 : t[i - 1] - k); return { terms: t, how: `the operations alternate: ×3, then −${k}, then ×3 …`, misc: [t[5] - k, t[5] * 3 - k, t[5] + (t[5] - t[4]), t[5] * 3 + k] }; }
+    case 'squareDiffs': { const a = rng.range(1, 12); const t = [a]; for (let i = 1; i < 6; i++) t.push(t[i - 1] + i * i); return { terms: t, how: 'the differences are the square numbers 1, 4, 9, 16, 25, so the next difference is 36', misc: [t[5] + 25, t[5] + 30, t[5] + 36 + 11, t[5] + (t[5] - t[4]) + 11] }; }
+    case 'primeDiffs': { const a = rng.range(1, 15); const ps = [2, 3, 5, 7, 11, 13]; const t = [a]; for (let i = 1; i < 6; i++) t.push(t[i - 1] + ps[i - 1]); return { terms: t, how: 'the differences are the prime numbers 2, 3, 5, 7, 11, so the next difference is 13', misc: [t[5] + 11, t[5] + 12, t[5] + 15, t[5] + 14] }; }
+    case 'digitSum': { const a = rng.range(11, 39); const t = [a]; for (let i = 1; i < 7; i++) t.push(t[i - 1] + digitSum(t[i - 1])); return { terms: t, how: 'each number is the previous number plus the sum of its own digits', misc: [t[6] + digitSum(t[5]), t[6] + (t[6] - t[5]), t[6] + digitSum(t[6]) + 1, t[6] + digitSum(t[6]) - 1] }; }
+    case 'tripleInterleave': {
+      const starts = [rng.range(1, 9), rng.range(10, 19), rng.range(20, 29)];
+      const steps = rng.shuffle([2, 3, 4, 5]).slice(0, 3);
+      const t = []; for (let i = 0; i < 8; i++) t.push(starts[i % 3] + Math.floor(i / 3) * steps[i % 3]);
+      const next = starts[2] + 2 * steps[2];
+      return { terms: t, next, how: `three series are interleaved (every third number belongs together): they go up by ${steps[0]}, ${steps[1]} and ${steps[2]}. The next number continues the third series`, misc: [t[7] + steps[1], t[5] + steps[2] + 1, next + steps[2], t[7] + (t[7] - t[6])] };
+    }
+    case 'recur2': { const a = rng.range(1, 3), b = a + rng.range(1, 3); const t = [a, b]; for (let i = 2; i < 7; i++) t.push(2 * t[i - 1] + t[i - 2]); return { terms: t, how: 'each number is twice the previous number plus the one before that', misc: [t[6] * 2, t[6] + t[5], t[6] * 2 + t[5] + 1, t[6] * 2 + t[4]] }; }
+    case 'letterSquares': { const a = rng.range(1, 3), d = 2; const nums = range(6).map((i) => a + i * d); const sq = range(6).map((i) => (i + 1) ** 2); if (nums[5] > 26) return null; const terms = range(5).map((i) => `${L(nums[i])}${sq[i]}`); return { terms, next: `${L(nums[5])}${sq[5]}`, textual: true, how: 'the letters move two places along the alphabet while the numbers are the square numbers 1, 4, 9, 16, 25', misc: [`${L(nums[5])}${sq[5] - 1}`, `${L(nums[5] + 1)}${sq[5]}`, `${L(nums[5])}${sq[4] + 10}`, `${L(nums[4] + 1)}${sq[5]}`], numeric: nums.slice(0, 5), nextNumeric: nums[5], numeric2: sq.slice(0, 5), nextNumeric2: sq[5] }; }
     case 'exponentPairs': {
       const bases = []; const b0 = rng.range(1, 3), bd = rng.range(1, 3); const e0 = 15 + rng.range(0, 6);
       const steps = []; for (let i = 0; i < 4; i++) { bases.push(i === 0 ? b0 : bases[i - 1] + bd + i - 1); }
@@ -63,6 +77,10 @@ function build(rule, rng) {
 // ---------------------------------------------------------------- solver: what could the next term be?
 const isInt = (x) => Number.isInteger(x);
 
+const digitSumOf = (v) => String(Math.abs(v)).split('').reduce((s, d) => s + Number(d), 0);
+
+const arithNext = (s) => { if (s.length < 2) return null; const d = s.slice(1).map((v, i) => v - s[i]); return d.every((x) => x === d[0]) ? s[s.length - 1] + d[0] : null; };
+
 export function predictNumeric(t) {
   const preds = new Map();
   const add = (name, v) => { if (v == null || !Number.isFinite(v)) return; if (!preds.has(v)) preds.set(v, []); preds.get(v).push(name); };
@@ -77,7 +95,6 @@ export function predictNumeric(t) {
   for (let a = 2; a <= 3; a++) { const b = t[1] - a * t[0]; if (isInt(b) && Math.abs(b) <= 10 && t.slice(1).every((v, i) => v === a * t[i] + b)) add(`×${a}${b >= 0 ? '+' : '−'}${Math.abs(b)}`, a * t[n - 1] + b); }
   // interleaved: two arithmetic subsequences
   const odd = t.filter((_, i) => i % 2 === 0), even = t.filter((_, i) => i % 2 === 1);
-  const arithNext = (s) => { if (s.length < 2) return null; const d = s.slice(1).map((v, i) => v - s[i]); return d.every((x) => x === d[0]) ? s[s.length - 1] + d[0] : null; };
   if (odd.length >= 3 && even.length >= 2) { const nextSub = n % 2 === 0 ? arithNext(odd) : arithNext(even); const otherOk = n % 2 === 0 ? arithNext(even) : arithNext(odd); if (nextSub != null && otherOk != null) add('interleaved', nextSub); }
   // alternating two operations (+p then −m, or ×2 then +k)
   if (n >= 5) {
@@ -94,6 +111,15 @@ export function predictNumeric(t) {
   }
   // pairwise: second of each pair = first/2 + c (odd length: next completes a pair)
   if (n % 2 === 1 && n >= 5) { const cs = []; for (let i = 0; i + 1 < n; i += 2) cs.push(t[i + 1] - t[i] / 2); if (cs.every((c) => c === cs[0]) && isInt(cs[0])) add('half plus constant', t[n - 1] / 2 + cs[0]); }
+  // differences that are consecutive squares or consecutive primes
+  { const ks = diffs.map((d) => Math.sqrt(d)); if (ks.every((k) => isInt(k) && k > 0) && ks.slice(1).every((k, i) => k === ks[i] + 1)) add('square differences', t[n - 1] + (ks[ks.length - 1] + 1) ** 2); }
+  { const i0 = PRIMES.indexOf(diffs[0]); if (i0 >= 0 && diffs.every((d, i) => PRIMES[i0 + i] === d) && PRIMES[i0 + diffs.length] != null) add('prime differences', t[n - 1] + PRIMES[i0 + diffs.length]); }
+  // digit-sum growth
+  if (t.slice(1).every((v, i) => v === t[i] + digitSumOf(t[i]))) add('digit sum', t[n - 1] + digitSumOf(t[n - 1]));
+  // three interleaved arithmetic series
+  if (n >= 7) { const subs = [0, 1, 2].map((k) => t.filter((_, i) => i % 3 === k)); const nexts = subs.map(arithNext); if (nexts.every((x) => x != null)) add('three interleaved', nexts[n % 3]); }
+  // second-order recurrences t = a*t[n-1] + b*t[n-2]
+  for (const a of [1, 2, 3]) for (const b of [1, 2, 3]) { if (a === 1 && b === 1) continue; if (n >= 4 && t.slice(2).every((v, i) => v === a * t[i + 1] + b * t[i])) add(`${a}×prev+${b}×before`, a * t[n - 1] + b * t[n - 2]); }
   // cubes
   { const roots = t.map((v) => Math.round(Math.cbrt(v))); if (roots.every((r, i) => r > 0 && r ** 3 === t[i]) && roots.slice(1).every((r, i) => r === roots[i] + 1)) add('cubes', (roots[n - 1] + 1) ** 3); }
   // consecutive primes
@@ -104,7 +130,7 @@ export function predictNumeric(t) {
 }
 
 export function buildSeries(difficulty, rng) {
-  const rule = rng.pick(SERIES_RULES[Math.min(4, Math.max(1, difficulty))]);
+  const rule = rng.pick(SERIES_RULES[Math.min(5, Math.max(1, difficulty))]);
   const s = build(rule, rng);
   if (!s) return null;
   const terms = s.terms;

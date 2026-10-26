@@ -2,7 +2,7 @@
 // then verified: exactly one in-grammar answer, visually distinct options, distractors tied to misconceptions.
 import { Rng } from './rng.js';
 import { PLAIN_SHAPES, ORIENTED_SHAPES, SET_PALETTES } from './shapes.js';
-import { makeDomains, FIGURE_ATTRS, figureCell, setCell, cellKey, SetOps, sameSet } from './cells.js';
+import { makeDomains, FIGURE_ATTRS, figureCell, setCell, cellKey, SetOps, sameSet, paletteOps } from './cells.js';
 import { makeRule, wrapValue, RULE_TYPES_BY_KIND } from './rules.js';
 import { predictAttribute, predictSet } from './solver.js';
 import { explainFigurePuzzle, figureHints, explainSetPuzzle, setHints, OP_TEXT } from './explain.js';
@@ -31,11 +31,12 @@ export const FAMILIES = {
   union:        { group: 'set', label: 'Union', kind: 'set', op: 'union' },
   intersection: { group: 'set', label: 'Intersection', kind: 'set', op: 'intersection' },
   xor:          { group: 'set', label: 'Exclusive-or', kind: 'set', op: 'xor' },
+  neither:      { group: 'set', label: 'Neither (complement)', kind: 'set', op: 'neither' },
   combination:  { group: 'combination', label: 'Combination', kind: 'figure', core: null },
 };
 
-export const DIFFICULTY_LABELS = { 1: 'Basic', 2: 'Intermediate', 3: 'Advanced', 4: 'Expert' };
-export const MAX_DIFFICULTY = 4;
+export const DIFFICULTY_LABELS = { 1: 'Basic', 2: 'Intermediate', 3: 'Advanced', 4: 'Expert', 5: 'Master' };
+export const MAX_DIFFICULTY = 5;
 export const FAMILY_IDS = Object.keys(FAMILIES);
 
 const MAX_ATTEMPTS = 400;
@@ -107,7 +108,7 @@ function chooseActiveRules(family, fam, difficulty, rng) {
     push(attr, rng.pick(typesFor(attr, fam.core.types, difficulty)));
     target = difficulty; // 1–4 rules
   } else {
-    target = { 1: 2, 2: 3, 3: 3, 4: 4 }[difficulty];
+    target = { 1: 2, 2: 3, 3: 3, 4: 4, 5: 5 }[difficulty];
   }
   const pool = rng.shuffle(Object.keys(EXTRA_POOL));
   for (const attr of pool) {
@@ -360,7 +361,9 @@ const SET_OP_FN = {
   union: SetOps.union,
   intersection: SetOps.intersection,
   xor: SetOps.xor,
+  neither: null, // bound per palette in buildSetPuzzle
 };
+function setOpFns(palette) { return { ...SET_OP_FN, neither: paletteOps(palette).neither }; }
 
 function genPair(op, elements, sizes, rng) {
   const all = elements;
@@ -369,6 +372,15 @@ function genPair(op, elements, sizes, rng) {
   const rest = all.filter((e) => !A.includes(e));
   let B;
   switch (op) {
+    case 'neither': {
+      // A and B must leave something uncovered, and overlap so the complement of the union differs from
+      // the complement of the intersection and from the exclusive-or.
+      if (A.length < 2 || rest.length < 2) return null;
+      const shared = rng.sample(A, rng.range(1, A.length - 1));
+      const extra = rng.sample(rest, rng.range(1, rest.length - 1));
+      B = [...shared, ...extra];
+      break;
+    }
     case 'add': {
       if (!rest.length) return null;
       B = rng.sample(rest, rng.range(1, Math.min(rest.length, sizes[1])));
@@ -387,7 +399,7 @@ function genPair(op, elements, sizes, rng) {
       B = [...shared, ...extra];
     }
   }
-  const C = SET_OP_FN[op](A, B);
+  const C = setOpFns(all === SET_PALETTES.dots.elements ? 'dots' : 'lines')[op](A, B);
   if (!C.length || sameSet(C, A) || sameSet(C, B)) return null;
   const sortByPalette = (m) => m.slice().sort((x, y) => all.indexOf(x) - all.indexOf(y));
   return { A: sortByPalette(A), B: sortByPalette(B), C: sortByPalette(C) };
@@ -397,7 +409,7 @@ function buildSetPuzzle(family, fam, difficulty, rng) {
   const op = fam.op;
   const palette = difficulty === 1 ? 'lines' : difficulty === 2 ? rng.pick(['lines', 'dots']) : 'dots';
   const orientation = difficulty === 1 ? 'row' : rng.pick(['row', 'col']);
-  const sizes = { 1: [2, 3], 2: [2, 4], 3: [3, 5], 4: [4, 6] }[difficulty];
+  const sizes = { 1: [2, 3], 2: [2, 4], 3: [3, 5], 4: [4, 6], 5: [5, 7] }[difficulty];
   const elements = SET_PALETTES[palette].elements;
   const lines = [];
   for (let i = 0; i < 3; i++) {
@@ -418,7 +430,7 @@ function buildSetPuzzle(family, fam, difficulty, rng) {
   const cells = [];
   for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) cells.push(setCell(palette, grid[r][c]));
   const answer = cells[8];
-  const options = buildSetOptions(op, orientation, palette, grid, cells, rng);
+  const options = buildSetOptions(op, orientation, palette, grid, cells, rng, difficulty);
   if (!options) return null;
   return finish({
     kind: 'set',
@@ -435,7 +447,7 @@ function buildSetPuzzle(family, fam, difficulty, rng) {
   });
 }
 
-function buildSetOptions(op, orientation, palette, grid, cells, rng) {
+function buildSetOptions(op, orientation, palette, grid, cells, rng, difficulty = 1) {
   const answer = cells[8];
   const answerMembers = grid[2][2];
   const first = orientation === 'row' ? grid[2][0] : grid[0][2];
@@ -445,7 +457,7 @@ function buildSetOptions(op, orientation, palette, grid, cells, rng) {
   const mk = (members, code, text) => ({ cell: setCell(palette, members), code, attrs: [], text });
   const isCopy = (m) => sameSet(m, first) || sameSet(m, second);
   const wrongOps = [];
-  for (const [other, fn] of Object.entries(SET_OP_FN)) {
+  for (const [other, fn] of Object.entries(setOpFns(palette))) {
     if (other === op || other === 'add') continue; // 'add' and 'union' give the same set; label the misreading as union
     const m = fn(first, second);
     if (m.length && !sameSet(m, answerMembers) && !isCopy(m)) {
@@ -498,10 +510,12 @@ function buildSetOptions(op, orientation, palette, grid, cells, rng) {
   const W = pool[0];
   if (!W) return null;
   take(W);
+  const wMisses = difficulty >= 5 ? 1 : 2;
+  const aMisses = difficulty >= 5 ? 3 : 2;
   let n = 0;
-  for (const c of nearMissesOf(W, `${W.code}+`, `${W.text}; and `)) { if (n >= 2) break; if (take(c)) n++; }
+  for (const c of nearMissesOf(W, `${W.code}+`, `${W.text}; and `)) { if (n >= wMisses) break; if (take(c)) n++; }
   n = 0;
-  for (const c of rng.shuffle(nearMisses)) { if (n >= 2) break; if (take(c)) n++; }
+  for (const c of rng.shuffle(nearMisses)) { if (n >= aMisses) break; if (take(c)) n++; }
   for (const c of [...pool.slice(1), ...random]) { if (chosen.length >= 5) break; take(c); }
   if (chosen.length < 5) return null;
   return assembleOptions(answer, chosen, rng);

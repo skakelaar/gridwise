@@ -186,8 +186,14 @@ export function setPatterns(grid, elements) {
   const add = (name, strong) => out.push({ name, strong });
   const R = rows(grid), C = cols(grid);
   if (grid.flat().every((m) => sameSet(m, grid[0][0]))) add('const', true);
+  // complement readings need the palette
+  const OPS = {
+    ...SET_OPS,
+    neither: (a, b) => elements.filter((x) => !a.includes(x) && !b.includes(x)),
+    notBoth: (a, b) => elements.filter((x) => !(a.includes(x) && b.includes(x))),
+  };
   for (const [dir, lines] of [['row', R], ['col', C]]) {
-    for (const [opName, op] of Object.entries(SET_OPS)) {
+    for (const [opName, op] of Object.entries(OPS)) {
       // standard reading: third cell = op(first, second)
       if (lines.every((l) => sameSet(op(l[0], l[1]), l[2]))) add(`${dir}:${opName}`, true);
       // reverse readings: first cell = op(second, third), middle cell = op(first, third)

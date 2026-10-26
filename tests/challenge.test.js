@@ -26,13 +26,14 @@ test('staircase moves one level per answer within 1..4 and timeouts count as mis
   };
   answer(true); assert.equal(c.level, 3);
   answer(true); assert.equal(c.level, 4);
-  answer(true); assert.equal(c.level, 4, 'capped at 4');
-  answer(false); assert.equal(c.level, 3);
-  now += 60000; challengeTimeout(c, now); assert.equal(c.level, 2);
-  assert.equal(c.items[4].timedOut, true);
+  answer(true); assert.equal(c.level, 5);
+  answer(true); assert.equal(c.level, 5, 'capped at 5');
+  answer(false); assert.equal(c.level, 4);
+  now += 60000; challengeTimeout(c, now); assert.equal(c.level, 3);
+  assert.equal(c.items[5].timedOut, true);
   answer(false); answer(false); assert.equal(c.level, 1, 'floored at 1');
   answer(false); assert.equal(c.level, 1);
-  assert.deepEqual(c.items.slice(0, 8).map((i) => i.difficulty), [2, 3, 4, 4, 3, 2, 1, 1]);
+  assert.deepEqual(c.items.slice(0, 9).map((i) => i.difficulty), [2, 3, 4, 5, 5, 4, 3, 2, 1]);
   // finish the rest
   while (!c.finished) answer(true);
   assert.equal(c.endedBy, 'completed');
@@ -40,7 +41,7 @@ test('staircase moves one level per answer within 1..4 and timeouts count as mis
   assert.equal(r.total, 12);
   assert.equal(r.answered, 11);
   assert.equal(r.timedOut, 1);
-  assert.equal(r.highest, 4);
+  assert.equal(r.highest, 5);
   assert.ok(assessmentText(r).join(' ').includes('small sample'));
 });
 

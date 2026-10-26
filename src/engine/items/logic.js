@@ -149,6 +149,57 @@ function chain(difficulty, rng) {
   };
 }
 
+function chain3(difficulty, rng) {
+  const [A, B, C] = rng.pick(CHAINS);
+  const D = rng.pick(['things kept in a museum', 'things that need water', 'things sold at the market', 'things found in a valley', 'things listed in the register'].filter((x) => x !== C));
+  const variants = [
+    { p: [`All ${A} are ${B}.`, `All ${B} are ${C}.`, `No ${C} are ${D}.`], answer: `No ${A} are ${D}`, why: `Every ${A.replace(/s$/, '')} is one of the ${B}, hence one of the ${C}, and none of the ${C} are ${D}.` },
+    { p: [`Some ${A} are ${B}.`, `All ${B} are ${C}.`, `All ${C} are ${D}.`], answer: `Some ${A} are ${D}`, why: `The ${A} that are ${B} are also ${C}, and therefore also ${D}.` },
+    { p: [`All ${A} are ${B}.`, `Some ${B} are ${C}.`, `All ${C} are ${D}.`], answer: NONE, why: `The ${B} that are ${C} need not be ${A}, so nothing links the ${A} to the ${C} or the ${D}.` },
+    { p: [`No ${A} are ${B}.`, `All ${C} are ${B}.`, `Some ${D} are ${C}.`], answer: `Some ${D} are not ${A}`, why: `The ${D} that are ${C} are ${B}, and no ${B} can be ${A}, so those ${D} are not ${A}.` },
+    { p: [`All ${A} are ${B}.`, `All ${A} are ${C}.`, `Some ${D} are ${B}.`], answer: NONE, why: `Being ${B} or ${C} does not make something one of the ${A}; the ${D} that are ${B} may or may not be ${A} or ${C}.` },
+  ];
+  const v = rng.pick(variants);
+  const pool = [`No ${A} are ${D}`, `Some ${A} are ${D}`, `All ${A} are ${D}`, `Some ${D} are not ${A}`, `All ${D} are ${C}`, `No ${B} are ${D}`, `Some ${C} are ${A}`, `All ${B} are ${A}`].filter((x) => x !== v.answer);
+  const candidates = v.answer === NONE ? rng.sample(pool, 3) : rng.shuffle([v.answer, ...rng.sample(pool, 2)]);
+  const options = [...candidates, NONE];
+  return {
+    question: 'Which statement logically and inescapably follows from the three statements?',
+    prompt: v.p.join('\n'),
+    options,
+    correctIndex: options.indexOf(v.answer),
+    explanation: { summary: v.answer === NONE ? 'None of the conclusions is logically inescapable.' : `${v.answer}.`, steps: [v.why, 'Chain the statements only where a class term is fully covered ("all" or "no"); "some" carries over just the part it names.'] },
+    hints: ['Link the statements through the class term they share.', 'A chain breaks wherever the shared term is only "some" of a class.', v.answer === NONE ? 'No candidate survives the chain.' : `Forced: ${v.answer}.`],
+    features: { rule: 'chain3', valid: v.answer !== NONE },
+  };
+}
+
+function conditionalChain(difficulty, rng) {
+  const [c1, c2] = rng.sample(CONDITIONALS, 2);
+  // If c1.cond then c1.res. If c1.res then c2.res.  (the middle term is reused as a condition)
+  const first = `If ${c1.cond}, then ${c1.res}.`;
+  const second = `If ${c1.res}, then ${c2.res}.`;
+  const variants = [
+    { third: `${c2.resNotPast}.`, answer: c1.condNotPast, why: 'Had the first condition held, both consequences would have followed. The final consequence did not, so the first condition cannot have held.' },
+    { third: `${c1.condPast}.`, answer: c2.resPast, why: 'The first condition held, so the first consequence followed, and with it the second.' },
+    { third: `${c2.resPast}.`, answer: NONE, why: 'The final consequence may have other causes; the rules only run forwards.' },
+    { third: `${c1.resNotPast}.`, answer: c1.condNotPast, why: 'The first consequence failed, so its condition cannot have held. Nothing follows about the final consequence, which may have other causes.' },
+  ];
+  const v = rng.pick(variants);
+  const pool = [c1.condPast, c1.condNotPast, c1.resPast, c1.resNotPast, c2.resPast, c2.resNotPast].filter((x) => x !== v.answer && `${x}.` !== v.third);
+  const candidates = v.answer === NONE ? rng.sample(pool, 3) : rng.shuffle([v.answer, ...rng.sample(pool, 2)]);
+  const options = [...candidates, NONE];
+  return {
+    question: 'Which statement logically and inescapably follows from the three statements?',
+    prompt: `${first}\n${second}\n${v.third}`,
+    options,
+    correctIndex: options.indexOf(v.answer),
+    explanation: { summary: v.answer === NONE ? 'None of the conclusions is logically inescapable.' : `${v.answer}.`, steps: [v.why] },
+    hints: ['Two "if … then" rules join into one longer chain.', 'From a failed consequence you may walk backwards up the chain; from a consequence that happened you may conclude nothing.', v.answer === NONE ? 'Nothing is forced.' : `Forced: ${v.answer}.`],
+    features: { rule: 'conditional-chain', valid: v.answer !== NONE },
+  };
+}
+
 const ATTRS = [
   { adj: 'taller', superl: 'tallest' }, { adj: 'older', superl: 'oldest' }, { adj: 'faster', superl: 'fastest' },
   { adj: 'heavier', superl: 'heaviest' }, { adj: 'richer', superl: 'richest' },
@@ -160,7 +211,8 @@ function permutations(arr) {
 }
 
 function ordering(difficulty, rng) {
-  const n = difficulty >= 4 ? rng.pick([4, 5]) : difficulty === 3 ? 4 : 3;
+  const n = difficulty >= 5 ? rng.pick([5, 6]) : difficulty >= 4 ? rng.pick([4, 5]) : difficulty === 3 ? 4 : 3;
+  const askPos = difficulty >= 5 && rng.chance(0.6) ? rng.pick([1, n - 1]) : 0; // 0 = top, 1 = second, n-1 = last
   const names = rng.sample(NAMES, n);
   const attr = rng.pick(ATTRS);
   const less = { taller: 'shorter', older: 'younger', faster: 'slower', heavier: 'lighter', richer: 'poorer' }[attr.adj];
@@ -173,10 +225,10 @@ function ordering(difficulty, rng) {
   const wantDetermined = difficulty <= 3 ? true : rng.chance(0.5);
   let chosen = null;
   for (let tries = 0; tries < 40 && !chosen; tries++) {
-    const k = n === 3 ? 2 : n === 4 ? rng.range(2, 3) : rng.range(3, 4);
+    const k = n === 3 ? 2 : n === 4 ? rng.range(2, 3) : n === 5 ? rng.range(3, 4) : rng.range(4, 5);
     const cand = rng.sample(pairs, k);
     const consistent = permutations(names).filter((p) => cand.every(([a, b]) => p.indexOf(a) < p.indexOf(b)));
-    const tops = new Set(consistent.map((p) => p[0]));
+    const tops = new Set(consistent.map((p) => p[askPos]));
     const determined = tops.size === 1;
     if (determined === wantDetermined) chosen = { cand, consistent, top: determined ? [...tops][0] : null };
   }
@@ -193,30 +245,32 @@ function ordering(difficulty, rng) {
   const options = [...rng.shuffle(names).slice(0, Math.min(4, names.length)), NONE];
   const answer = chosen.top ?? NONE;
   if (chosen.top && !options.includes(chosen.top)) { options[0] = chosen.top; }
+  const posWord = askPos === 0 ? attr.superl : askPos === 1 ? `second ${attr.superl}` : `least ${attr.adj.replace(/er$/, '')}`.replace('least tall', 'shortest').replace('least old', 'youngest').replace('least fast', 'slowest').replace('least heav', 'lightest').replace('least rich', 'poorest');
   const why = chosen.top
-    ? `Putting the statements together gives the order ${chosen.consistent[0].join(' > ')} for ${attr.superl.replace('est', '')}ness is not needed: every order that fits the statements has ${chosen.top} at the top.`
-    : `More than one order fits the statements (for example ${chosen.consistent.slice(0, 2).map((p) => p.join(' > ')).join(' or ')}), so the ${attr.superl} person is not determined.`;
+    ? `Every order that fits the statements agrees on that position.`
+    : `More than one order fits the statements (for example ${chosen.consistent.slice(0, 2).map((p) => p.join(' > ')).join(' or ')}), so that position is not determined.`;
   return {
     question: 'Which statement logically and inescapably follows from the statements?',
-    prompt: `${prompt}\nWho is the ${attr.superl}?`,
+    prompt: `${prompt}\nWho is the ${posWord}?`,
     options,
     correctIndex: options.indexOf(answer),
-    explanation: { summary: chosen.top ? `${chosen.top} is the ${attr.superl}.` : 'None of the conclusions is logically inescapable.', steps: [chosen.top ? `Every order consistent with the statements puts ${chosen.top} first (for example ${chosen.consistent[0].join(' > ')}).` : why] },
-    hints: ['Write the people in a line from the statements, one comparison at a time.', 'Check whether the statements pin down who is at the top, or leave two people who could both be first.', chosen.top ? `${chosen.top} must be first.` : 'The top position is not fixed by the statements.'],
+    explanation: { summary: chosen.top ? `${chosen.top} is the ${posWord}.` : 'None of the conclusions is logically inescapable.', steps: [chosen.top ? `Every order consistent with the statements puts ${chosen.top} in that position (for example ${chosen.consistent[0].join(' > ')}).` : why] },
+    hints: ['Write the people in a line from the statements, one comparison at a time.', 'Check whether the statements pin down the position asked about, or leave two people who could both fill it.', chosen.top ? `${chosen.top} must be the ${posWord}.` : 'That position is not fixed by the statements.'],
     features: { rule: 'ordering', people: n, valid: !!chosen.top },
   };
 }
 
-const BUILDERS = { universal, negative: negativeUniversal, conditional, chain, ordering };
+const BUILDERS = { universal, negative: negativeUniversal, conditional, chain, ordering, chain3, conditionalChain };
 const KINDS = {
   1: ['universal', 'conditional', 'ordering'],
   2: ['universal', 'negative', 'conditional', 'ordering'],
   3: ['universal', 'negative', 'conditional', 'chain', 'ordering'],
   4: ['negative', 'conditional', 'chain', 'ordering', 'universal'],
+  5: ['chain3', 'conditionalChain', 'ordering', 'chain'],
 };
 
 export function buildLogic(difficulty, rng) {
-  const kind = rng.pick(KINDS[Math.min(4, Math.max(1, difficulty))]);
+  const kind = rng.pick(KINDS[Math.min(5, Math.max(1, difficulty))]);
   const item = BUILDERS[kind](difficulty, rng);
   if (!item) return null;
   // Four or five options; exactly one correct by construction. Sanity: options distinct.

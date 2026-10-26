@@ -7,7 +7,8 @@ import { puzzleFor, makeAttempt } from './session.js';
 export const MOCK_TIERS = {
   standard: { id: 'standard', label: 'Standard (levels 1–2)', levels: [1, 2] },
   higher: { id: 'higher', label: 'Higher (levels 3–4)', levels: [3, 4] },
-  mixed: { id: 'mixed', label: 'Mixed (levels 1–4)', levels: [1, 2, 3, 4] },
+  master: { id: 'master', label: 'Master (levels 4–5)', levels: [4, 5] },
+  mixed: { id: 'mixed', label: 'Mixed (levels 1–5)', levels: [1, 2, 3, 4, 5] },
 };
 export const MOCK_DEFAULTS = { count: 16, minutes: 8, tier: 'mixed' };
 

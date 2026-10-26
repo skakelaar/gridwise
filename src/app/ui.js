@@ -95,8 +95,8 @@ export function familySelect({ id, value, onChange }) {
 
 export function difficultySelect({ id, value, onChange }) {
   const sel = h('select', { id, class: 'select', onChange: (e) => onChange(e.target.value) });
-  sel.appendChild(h('option', { value: 'mixed' }, 'Mixed (1–4)'));
-  for (const d of [1, 2, 3, 4]) sel.appendChild(h('option', { value: String(d) }, `${d} – ${DIFFICULTY_LABELS[d]}`));
+  sel.appendChild(h('option', { value: 'mixed' }, 'Mixed (1–5)'));
+  for (const d of [1, 2, 3, 4, 5]) sel.appendChild(h('option', { value: String(d) }, `${d} – ${DIFFICULTY_LABELS[d]}`));
   sel.value = String(value ?? 'mixed');
   return sel;
 }

@@ -8,7 +8,7 @@ const SEEDS = Number(process.env.SEEDS || 150);
 const seeds = Array.from({ length: SEEDS }, (_, i) => `it-${i}`);
 
 for (const family of ITEM_FAMILY_IDS) {
-  for (const difficulty of [1, 2, 3, 4]) {
+  for (const difficulty of [1, 2, 3, 4, 5]) {
     test(`${family} d${difficulty}: ${SEEDS} seeds generate, reproduce, have one correct option`, () => {
       for (const seed of seeds) {
         const a = generateItem({ family, difficulty, seed });
@@ -30,7 +30,7 @@ for (const family of ITEM_FAMILY_IDS) {
 }
 
 test('number-series options admit exactly one in-grammar continuation', () => {
-  for (const difficulty of [1, 2, 3, 4]) for (const seed of seeds) {
+  for (const difficulty of [1, 2, 3, 4, 5]) for (const seed of seeds) {
     const it = generateItem({ family: 'series', difficulty, seed });
     if (it.features.rule === 'exponentPairs' || it.features.letters) continue;
     const terms = it.prompt.replace(' -- ...', '').split(' -- ').map(Number);

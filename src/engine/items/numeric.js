@@ -209,13 +209,111 @@ function equationPair(rng) {
   };
 }
 
+function compoundPercent(rng) {
+  const up = rng.pick([10, 20, 25, 40, 50]), down = rng.pick([10, 20, 25, 40, 50]);
+  const factor = (1 + up / 100) * (1 - down / 100);
+  const change = Math.round((factor - 1) * 1000) / 10;
+  const fmt = (v) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v)} %`;
+  const wrong = [up - down, -(down - up), change + 5, change - 5, up - down + 2.5].map((v) => Math.round(v * 10) / 10).filter((v) => v !== change);
+  const uniq = [...new Set(wrong)];
+  if (uniq.length < 4) return null;
+  const opts = [change, ...rng.shuffle(uniq).slice(0, 4)];
+  const order = rng.shuffle(opts.map((_, i) => i));
+  return {
+    question: 'What is the overall change?',
+    prompt: `A price rises by ${up} % and then falls by ${down} %.`,
+    options: order.map((i) => fmt(opts[i])),
+    correctIndex: order.indexOf(0),
+    explanation: { summary: `The overall change is ${fmt(change)}.`, steps: [`Multiply the factors: ${1 + up / 100} × ${1 - down / 100} = ${Math.round(factor * 1000) / 1000}.`, 'Percentages applied one after the other multiply; they do not add.'] },
+    hints: ['Take a starting price of 100 and apply each change in turn.', `100 → ${100 + up} → ${Math.round((100 + up) * (1 - down / 100) * 10) / 10}.`, `That is ${fmt(change)} overall.`],
+    features: { rule: 'compound-percent' },
+  };
+}
+
+function ratioShare(rng) {
+  const parts = rng.shuffle([1, 2, 3, 4, 5]).slice(0, 3).sort((a, b) => a - b);
+  const unit = rng.pick([4, 5, 6, 8, 10, 12]);
+  const sum = parts.reduce((a, b) => a + b, 0);
+  const total = sum * unit;
+  const which = rng.pick(['largest', 'smallest']);
+  const ans = (which === 'largest' ? parts[2] : parts[0]) * unit;
+  const wrong = [parts[1] * unit, (which === 'largest' ? parts[0] : parts[2]) * unit, Math.round(total / 3), ans + unit, ans - unit, unit].filter((v) => v > 0 && v !== ans);
+  const uniq = [...new Set(wrong)];
+  if (uniq.length < 4) return null;
+  const opts = [ans, ...rng.shuffle(uniq).slice(0, 4)];
+  const order = rng.shuffle(opts.map((_, i) => i));
+  return {
+    question: `What is the ${which} share?`,
+    prompt: `${total} is shared in the ratio ${parts.join(' : ')}.`,
+    options: order.map((i) => String(opts[i])),
+    correctIndex: order.indexOf(0),
+    explanation: { summary: `The ${which} share is ${ans}.`, steps: [`The ratio has ${sum} parts, so one part is ${total} ÷ ${sum} = ${unit}.`, `The ${which} share is ${which === 'largest' ? parts[2] : parts[0]} parts: ${which === 'largest' ? parts[2] : parts[0]} × ${unit} = ${ans}.`] },
+    hints: ['Add the ratio numbers to find how many parts there are.', `${total} ÷ ${sum} gives one part.`, 'Multiply one part by the number of parts in the share you want.'],
+    features: { rule: 'ratio-share' },
+  };
+}
+
+function powersRoots(rng) {
+  const kind = rng.pick(['rootTimesPower', 'powerMinusPower', 'rootPlusRoot']);
+  let prompt, ans, steps;
+  if (kind === 'rootTimesPower') { const r = rng.pick([4, 9, 16, 25, 36, 49, 64, 81, 100, 121, 144]); const b = rng.pick([2, 3]), e = rng.pick([2, 3, 4]); ans = Math.sqrt(r) * b ** e; prompt = `√${r} × ${b}{sup ${e}} = ?`; steps = [`√${r} = ${Math.sqrt(r)} and ${b}^${e} = ${b ** e}, so ${Math.sqrt(r)} × ${b ** e} = ${ans}.`]; }
+  else if (kind === 'powerMinusPower') { const a = rng.pick([2, 3, 4, 5]), e1 = rng.pick([3, 4]), b = rng.pick([2, 3]), e2 = rng.pick([2, 3, 5]); if (a ** e1 <= b ** e2) return null; ans = a ** e1 - b ** e2; prompt = `${a}{sup ${e1}} − ${b}{sup ${e2}} = ?`; steps = [`${a}^${e1} = ${a ** e1} and ${b}^${e2} = ${b ** e2}, so the difference is ${ans}.`]; }
+  else { const r1 = rng.pick([16, 25, 36, 49, 64, 81]), r2 = rng.pick([4, 9, 100, 121, 144]); ans = Math.sqrt(r1) + Math.sqrt(r2); prompt = `√${r1} + √${r2} = ?`; steps = [`√${r1} = ${Math.sqrt(r1)} and √${r2} = ${Math.sqrt(r2)}; their sum is ${ans}.`]; }
+  const wrong = [ans + 1, ans - 1, ans * 2, Math.round(ans / 2), ans + 4, ans - 6].filter((v) => v > 0 && v !== ans && Number.isInteger(v));
+  const uniq = [...new Set(wrong)];
+  if (uniq.length < 4) return null;
+  const opts = [ans, ...rng.shuffle(uniq).slice(0, 4)];
+  const order = rng.shuffle(opts.map((_, i) => i));
+  return {
+    question: 'Which number is the result?',
+    prompt,
+    options: order.map((i) => String(opts[i])),
+    correctIndex: order.indexOf(0),
+    explanation: { summary: `The result is ${ans}.`, steps },
+    hints: ['Evaluate each power or root on its own first.', 'Then combine the two results.', `The result is ${ans}.`],
+    features: { rule: 'powers-roots' },
+  };
+}
+
+function mixedFractions(rng) {
+  const w1 = rng.range(1, 3), w2 = rng.range(1, 2);
+  const d1 = rng.pick([2, 3, 4, 6]), d2 = rng.pick([3, 4, 5, 6, 8].filter((d) => d !== d1));
+  const n1 = rng.range(1, d1 - 1), n2 = rng.range(1, d2 - 1);
+  const sub = rng.chance(0.5);
+  const L = d1 * d2 / gcd(d1, d2);
+  const top1 = w1 * d1 + n1, top2 = w2 * d2 + n2;
+  const num = sub ? top1 * (L / d1) - top2 * (L / d2) : top1 * (L / d1) + top2 * (L / d2);
+  if (num <= 0) return null;
+  const [rn, rd] = simplify(num, L);
+  const whole = Math.floor(rn / rd), rem = rn - whole * rd;
+  const mixed = (n, d) => { const wh = Math.floor(n / d), r = n - wh * d; return wh === 0 ? frac(n, d) : r === 0 ? String(wh) : `${wh} ${frac(r, d)}`; };
+  const plainMixed = (n, d) => { const wh = Math.floor(n / d), r = n - wh * d; return wh === 0 ? `${n}/${d}` : r === 0 ? String(wh) : `${wh} ${r}/${d}`; };
+  const key = (n, d) => `${n}/${d}`;
+  const wrongs = [simplify(sub ? Math.abs(w1 * d1 * d2 - w2 * d1 * d2) + Math.abs(n1 - n2) * 1 : (w1 + w2) * d1 * d2 + (n1 + n2), d1 * d2), simplify(num + L / d2, L), simplify(num - L / d1, L), [rn + rd, rd], simplify((sub ? w1 - w2 : w1 + w2) * (d1 + d2) + (sub ? Math.abs(n1 - n2) : n1 + n2), d1 + d2)]
+    .filter((w) => w[0] > 0 && key(...w) !== key(rn, rd));
+  const uniq = []; for (const w of wrongs) if (!uniq.some((u) => key(...u) === key(...w))) uniq.push(w);
+  if (uniq.length < 4) return null;
+  const opts = [[rn, rd], ...uniq.slice(0, 4)];
+  const order = rng.shuffle(opts.map((_, i) => i));
+  return {
+    question: 'Which is the result?',
+    prompt: `${w1} ${frac(n1, d1)} ${sub ? '−' : '+'} ${w2} ${frac(n2, d2)} = ?`,
+    options: order.map((i) => mixed(...opts[i])),
+    correctIndex: order.indexOf(0),
+    explanation: { summary: `The result is ${plainMixed(rn, rd)}.`, steps: [`Convert to improper fractions: ${top1}/${d1} and ${top2}/${d2}.`, `Common denominator ${L}: ${top1 * (L / d1)}/${L} ${sub ? '−' : '+'} ${top2 * (L / d2)}/${L} = ${num}/${L}${num !== rn ? ` = ${rn}/${rd}` : ''}, that is ${plainMixed(rn, rd)}.`] },
+    hints: ['Turn each mixed number into an improper fraction first.', `Then use the common denominator ${L}.`, 'Convert the answer back to a mixed number and simplify.'],
+    features: { rule: sub ? 'mixed-subtract' : 'mixed-add', whole, rem },
+  };
+}
+
 export function buildNumeric(difficulty, rng) {
   const pick = {
     1: [equivalence, percent, ratio],
     2: [percent, equivalence, fractionArith, ratio, percentOfWhat],
     3: [fractionArith, equationFill, compareFractions, fractionMultiply, percentOfWhat],
     4: [equationFill, equationPair, fractionArith, fractionMultiply, compareFractions],
-  }[Math.min(4, Math.max(1, difficulty))];
+    5: [compoundPercent, ratioShare, powersRoots, mixedFractions, equationPair],
+  }[Math.min(5, Math.max(1, difficulty))];
   const item = rng.pick(pick)(rng);
   if (!item) return null;
   if (new Set(item.options).size !== item.options.length) return null;

@@ -31,7 +31,7 @@ const MAX_ATTEMPTS = 200;
 export function generateItem({ family, difficulty = 1, seed }) {
   const fam = ITEM_FAMILIES[family];
   if (!fam) throw new Error(`unknown item family ${family}`);
-  difficulty = Math.min(4, Math.max(1, Number(difficulty) || 1));
+  difficulty = Math.min(5, Math.max(1, Number(difficulty) || 1));
   seed = String(seed ?? '0');
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     const rng = new Rng(`${family}|${difficulty}|${seed}|${attempt}`);

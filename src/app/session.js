@@ -53,9 +53,9 @@ export function chooseSpec({ filter, difficulty, personalise, attempts = [], ada
   }
   let level;
   if (personalise && adaptive) level = adaptive.level;
-  else if (difficulty === 'mixed' || difficulty == null) level = 1 + Math.floor(random() * 4);
+  else if (difficulty === 'mixed' || difficulty == null) level = 1 + Math.floor(random() * 5);
   else level = Number(difficulty);
-  level = Math.min(4, Math.max(1, level || 1));
+  level = Math.min(5, Math.max(1, level || 1));
   return { family, difficulty: level, seed: randomSeed() };
 }
 
@@ -66,7 +66,7 @@ export function updateAdaptive(adaptive, correct) {
     a.correctStreak += 1;
     a.wrongStreak = 0;
     if (a.correctStreak >= 3) {
-      if (a.level < 4) a.level += 1;
+      if (a.level < 5) a.level += 1;
       a.correctStreak = 0;
     }
   } else {

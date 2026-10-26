@@ -4,7 +4,7 @@ import { VOCAB, ODD_SETS } from './wordbank.js';
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 function synonymOrAntonym(difficulty, rng, wantAntonym) {
-  const level = Math.min(4, Math.max(1, difficulty));
+  const level = Math.min(5, Math.max(1, difficulty));
   const pool = VOCAB.filter((v) => v.level === level);
   const target = rng.pick(pool);
   const answer = rng.pick(wantAntonym ? target.ant : target.syn);
@@ -34,7 +34,7 @@ function synonymOrAntonym(difficulty, rng, wantAntonym) {
 }
 
 function oddOneOut(difficulty, rng) {
-  const level = Math.min(4, Math.max(1, difficulty));
+  const level = Math.min(5, Math.max(1, difficulty));
   const sets = ODD_SETS.filter((s) => s.level === level);
   const set = rng.pick(sets);
   const members = rng.sample(set.words, 4);

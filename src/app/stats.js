@@ -32,7 +32,7 @@ export function byGroup(attempts) {
 }
 
 export function byDifficulty(attempts) {
-  return [1, 2, 3, 4].map((d) => ({
+  return [1, 2, 3, 4, 5].map((d) => ({
     id: String(d),
     label: `${d} – ${DIFFICULTY_LABELS[d]}`,
     ...summarise(attempts.filter((a) => Number(a.difficulty) === d)),

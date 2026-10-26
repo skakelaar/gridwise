@@ -89,6 +89,19 @@ discarded a session.
   time accounting and the report; in the browser an 8-question test was run with flagging, jumping, changing an
   answer, finishing early and reading the report (one crash on the report title fixed).
 
+## Master level (added 2026-10-26)
+
+* Matrices: five simultaneous rules, the "neither" set operation with sets of 5–7 on the dot palette, near-miss
+  distractors. The uniqueness solver gained complement readings against both the true palette and the visible
+  elements; the independent QA solver gained the same readings. One addition puzzle that admitted an
+  "everything except what both share" reading over the visible elements was caught by the QA sweep and is now
+  rejected by the generator.
+* Items: six new series rules (all covered by the series solver), three-premise and chained-conditional logic,
+  five- and six-person orderings asking for second or last place, compound percentages, ratio sharing, powers and
+  roots, mixed numbers, 40 rare vocabulary entries, level-5 analogy pairs and reversed analogies, seven more
+  odd-one-out sets.
+* All sweeps run over levels 1–5 (matrix QA sweep: 15 families × 5 levels × 300 seeds).
+
 ## Not verified
 
 * Real screen-reader output (ARIA roles, labels and live regions were checked in the DOM only).

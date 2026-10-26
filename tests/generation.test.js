@@ -12,7 +12,7 @@ const SEEDS = Number(process.env.SEEDS || 120);
 const seeds = Array.from({ length: SEEDS }, (_, i) => `seed-${i}`);
 
 for (const family of FAMILY_IDS) {
-  for (const difficulty of [1, 2, 3, 4]) {
+  for (const difficulty of [1, 2, 3, 4, 5]) {
     test(`${family} d${difficulty}: ${SEEDS} seeds generate, verify and reproduce`, () => {
       for (const seed of seeds) {
         const p = generatePuzzle({ family, difficulty, seed });
@@ -91,11 +91,13 @@ test('difficulty follows documented structural features', () => {
         assert.equal(p3.features.palette, 'dots');
         assert.equal(p4.features.palette, 'dots');
         assert.equal(p4.features.maxSetSize, 6);
+        const p5 = generatePuzzle({ family, difficulty: 5, seed });
+        assert.equal(p5.features.maxSetSize, 7);
       }
     } else {
       for (const seed of seeds.slice(0, 20)) {
-        const expect = family === 'combination' ? { 1: 2, 2: 3, 3: 3, 4: 4 } : { 1: 1, 2: 2, 3: 3, 4: 4 };
-        for (const d of [1, 2, 3, 4]) {
+        const expect = family === 'combination' ? { 1: 2, 2: 3, 3: 3, 4: 4, 5: 5 } : { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5 };
+        for (const d of [1, 2, 3, 4, 5]) {
           const p = generatePuzzle({ family, difficulty: d, seed });
           assert.equal(p.features.ruleCount, expect[d], `${family} d${d} rule count`);
         }
@@ -108,7 +110,7 @@ test('inner shapes and count arithmetic only appear from level 3 and stay well-f
   let inner = 0, arith = 0;
   for (const family of FAMILY_IDS) {
     if (FAMILIES[family].kind === 'set') continue;
-    for (const d of [1, 2, 3, 4]) for (const seed of seeds.slice(0, 40)) {
+    for (const d of [1, 2, 3, 4, 5]) for (const seed of seeds.slice(0, 40)) {
       const p = generatePuzzle({ family, difficulty: d, seed });
       if (p.features.inner) inner++;
       if (p.features.arithmetic) arith++;

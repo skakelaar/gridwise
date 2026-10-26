@@ -9,7 +9,7 @@
 // This checks uniqueness within the supported grammar, not against every imaginable pattern.
 
 import { wrapValue } from './rules.js';
-import { SetOps, sameSet } from './cells.js';
+import { SetOps, sameSet, paletteOps } from './cells.js';
 
 // known: 3x3 matrix of value indices with known[2][2] === null.
 export function predictAttribute(domain, known) {
@@ -137,7 +137,16 @@ export function predictSet(palette, known /* 3x3 of member arrays, [2][2] null *
     const hit = preds.find((p) => sameSet(p.members, members));
     if (hit) hit.names.push(name); else preds.push({ members, names: [name] });
   };
-  for (const [opName, op] of Object.entries(SetOps)) {
+  // Complements are read against the true palette and also against the elements a solver can actually see
+  // (a person does not know which palette positions never appear), so both universes must agree.
+  const observed = [...new Set(known.flat().filter(Boolean).flat())];
+  const ops = {
+    ...SetOps,
+    ...paletteOps(palette),
+    neitherSeen: (a, b) => observed.filter((x) => !a.includes(x) && !b.includes(x)),
+    notBothSeen: (a, b) => observed.filter((x) => !(a.includes(x) && b.includes(x))),
+  };
+  for (const [opName, op] of Object.entries(ops)) {
     // row-wise: cell(r,2) = op(cell(r,0), cell(r,1))
     if (sameSet(op(known[0][0], known[0][1]), known[0][2]) && sameSet(op(known[1][0], known[1][1]), known[1][2])) {
       add(`row:${opName}`, op(known[2][0], known[2][1]));

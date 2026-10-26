@@ -43,7 +43,9 @@ an inner-shape rule is never combined with a number or outer-fill rule.
 ## Set operations
 
 `add` (the two cells never overlap and the third contains everything), `subtract` (the second cell is part of
-the first and is removed), `union`, `intersection`, `xor` (exclusive-or: elements in exactly one of the two).
+the first and is removed), `union`, `intersection`, `xor` (exclusive-or: elements in exactly one of the two),
+`neither` (the positions that are empty in both cells; its complement reading is checked against both the full
+palette and the elements that are actually visible).
 The operation runs along rows (difficulty 1) or along rows or columns (difficulty 2–3). Generation forces the
 two complete rows to rule out the other operations (for example union puzzles always have overlapping cells
 so that exclusive-or gives a different result).
@@ -61,7 +63,7 @@ so that exclusive-or gives a different result).
 | alternation | Alternation and cyclic sequences | rowAlt / colAlt / checker on fill, shape or size |
 | cyclic | Alternation and cyclic sequences | latin (cyclic shift) on shape, fill or size |
 | addition, subtraction | Addition and subtraction | set add / subtract |
-| union, intersection, xor | Union, intersection and exclusive-or | set operation |
+| union, intersection, xor, neither | Union, intersection and exclusive-or | set operation; "neither" shows the positions empty in both cells (complement of the union) |
 | combination | Combined rules | two or three rules drawn from the pool above |
 
 ## Difficulty (structural, not psychometric)
@@ -75,6 +77,7 @@ population, does not estimate IQ or percentiles, and is not comparable with any 
 | 2 Intermediate | core rule + 1 independent rule on another attribute; number steps up to 2 | 3 rules | lines or dots palette, sets of 2–4, rows or columns |
 | 3 Advanced | core rule + 2 independent rules; rotation steps up to 135°; count arithmetic and inner shapes enter the pool | 3 rules, the first of which is a two-direction rule (grid or latin) | "dots" palette (9 elements), sets of 3–5, rows or columns |
 | 4 Expert | core rule + 3 independent rules (four attributes change at once) | 4 rules, the first of which is a two-direction rule | "dots" palette, sets of 4–6, rows or columns |
+| 5 Master | core rule + 4 independent rules (five attributes change at once, inner shapes and count arithmetic in the pool) | 5 rules, the first of which is a two-direction rule | "dots" palette, sets of 5–7, the "neither" (complement of the union) operation in the pool, and distractors that are mostly one-element near misses |
 
 `puzzle.features` records the actual rule count, the rule types, whether a two-direction rule is present and
 the largest step, so the UI and the tests can check the level against these definitions.
@@ -86,11 +89,11 @@ distractors, explanation and hints) and the same four levels.
 
 | Family | Group | What is generated | Level ladder |
 |---|---|---|---|
-| series | Number series | 5–7 terms, "which comes next", numbers or letters | 1: constant step, ×2/×3, growing step, halving · 2: sum of previous two, alternating operations, squares, cubes, letter steps · 3: interleaved series, pairwise rules, alternating + and −, primes, growing letter gaps · 4: base/exponent pairs, growing differences, "double plus k", ×3/−k alternation, two-letter pairs |
-| logic | Logical deduction | "Which statement logically and inescapably follows": universal affirmatives (all A have B), universal negatives (no A have B), conditionals (if … then …), chained syllogisms (all/some/no over three classes), and ordering problems; option pools include true-sounding but irrelevant statements | 1: direct application · 2: contrapositive, converse trap, negatives · 3: inverse traps, chains, 4-person orders · 4: chains with "some", 4–5-person orders that may be undetermined |
-| numeric | Fractions and arithmetic | fraction equivalence, percentages, "p % of what", proportions, fraction addition/subtraction/multiplication/division, comparing fractions, equation filling with one unknown in two places or with two different unknowns (answer as a pair) | 1: equivalence, percent, ratio · 2: + fraction arithmetic, percent-of-what · 3: + comparing, multiply/divide, equation filling · 4: + two-unknown equations |
-| analogy | Verbal reasoning | "A is to B as C is to …" from a curated bank of 24 relation types and about 500 level-graded pairs (opposites, tools, producers, parts, homes, categories, degree, cause, function, collective nouns, specialists, young animals, workplaces, materials, players, sequence, agents, symptoms, units, containers, fields of study, gender pairs, animal sounds, derived adjectives) | the level picks the vocabulary tier of the pairs |
-| vocab | Verbal reasoning | nearest synonym, nearest antonym (with the opposite kind of word as a trap) over a 130-word graded bank, odd one out (four of a set plus an intruder from a confusable set, 32 sets) | 1 everyday words … 4 advanced vocabulary (e.g. laconic, parsimonious, obdurate) |
+| series | Number series | 5–8 terms, "which comes next", numbers or letters | 1: constant step, ×2/×3, growing step, halving · 2: sum of previous two, alternating operations, squares, cubes, letter steps · 3: interleaved series, pairwise rules, alternating + and −, primes, growing letter gaps · 4: base/exponent pairs, growing differences, "double plus k", ×3/−k alternation, two-letter pairs · 5: differences that are squares or primes, digit-sum growth, three interleaved series, second-order recurrences, letter-and-square pairs |
+| logic | Logical deduction | "Which statement logically and inescapably follows": universal affirmatives (all A have B), universal negatives (no A have B), conditionals (if … then …), chained syllogisms (all/some/no over three classes), and ordering problems; option pools include true-sounding but irrelevant statements | 1: direct application · 2: contrapositive, converse trap, negatives · 3: inverse traps, chains, 4-person orders · 4: chains with "some", 4–5-person orders that may be undetermined · 5: three-premise class chains, chained conditionals, 5–6-person orders asking for second or last place |
+| numeric | Fractions and arithmetic | fraction equivalence, percentages, "p % of what", proportions, fraction addition/subtraction/multiplication/division, comparing fractions, equation filling with one unknown in two places or with two different unknowns (answer as a pair) | 1: equivalence, percent, ratio · 2: + fraction arithmetic, percent-of-what · 3: + comparing, multiply/divide, equation filling · 4: + two-unknown equations · 5: compound percentage changes, ratio sharing, powers and roots, mixed-number arithmetic |
+| analogy | Verbal reasoning | "A is to B as C is to …" from a curated bank of 24 relation types and about 500 level-graded pairs (opposites, tools, producers, parts, homes, categories, degree, cause, function, collective nouns, specialists, young animals, workplaces, materials, players, sequence, agents, symptoms, units, containers, fields of study, gender pairs, animal sounds, derived adjectives) | the level picks the vocabulary tier of the pairs; at level 5 half the analogies are given in reverse direction |
+| vocab | Verbal reasoning | nearest synonym, nearest antonym (with the opposite kind of word as a trap) over a 130-word graded bank, odd one out (four of a set plus an intruder from a confusable set, 32 sets) | 1 everyday words … 4 advanced (laconic, parsimonious, obdurate) · 5 rare (perspicacious, pusillanimous, vicissitude) |
 
 Correctness for these items: number-series options are checked against a solver that enumerates every series
 rule in the grammar above (plus arithmetic, geometric, second-difference, Fibonacci-like, linear-recurrence,

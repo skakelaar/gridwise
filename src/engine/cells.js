@@ -49,6 +49,15 @@ export const SetOps = {
   diffBA: (a, b) => b.filter((x) => !a.includes(x)),
 };
 
+// Operations that need the palette (complements). Bound into SetOps per palette by withPalette().
+export function paletteOps(palette) {
+  const all = SET_PALETTES[palette].elements;
+  return {
+    neither: (a, b) => all.filter((x) => !a.includes(x) && !b.includes(x)),
+    notBoth: (a, b) => all.filter((x) => !(a.includes(x) && b.includes(x))),
+  };
+}
+
 export function sameSet(a, b) {
   if (a.length !== b.length) return false;
   const s = new Set(a);

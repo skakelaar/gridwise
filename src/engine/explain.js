@@ -9,6 +9,7 @@ const OP_TEXT = {
   union: { name: 'union', verb: 'merges', how: 'the third cell shows every element that appears in either of the first two cells' },
   intersection: { name: 'intersection', verb: 'keeps the shared part of', how: 'the third cell keeps only the elements that appear in both of the first two cells' },
   xor: { name: 'exclusive-or', verb: 'keeps the differences between', how: 'the third cell keeps the elements that appear in only one of the first two cells; anything they share disappears' },
+  neither: { name: 'neither', verb: 'shows what is missing from', how: 'the third cell shows exactly the positions that are empty in both of the first two cells (the complement of their union)' },
 };
 export { OP_TEXT };
 
