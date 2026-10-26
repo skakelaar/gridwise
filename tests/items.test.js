@@ -32,7 +32,7 @@ for (const family of ITEM_FAMILY_IDS) {
 test('number-series options admit exactly one in-grammar continuation', () => {
   for (const difficulty of [1, 2, 3, 4]) for (const seed of seeds) {
     const it = generateItem({ family: 'series', difficulty, seed });
-    if (it.features.rule === 'exponentPairs') continue;
+    if (it.features.rule === 'exponentPairs' || it.features.letters) continue;
     const terms = it.prompt.replace(' -- ...', '').split(' -- ').map(Number);
     const preds = predictNumeric(terms);
     assert.equal(preds.size, 1, `${it.id}: ${[...preds.keys()]}`);

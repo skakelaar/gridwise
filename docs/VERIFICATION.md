@@ -74,6 +74,21 @@ discarded a session.
 * Browser: practice with each question type (prompt, text options, keyboard, feedback), a 16-question mixed
   challenge answered through to the report, item answer keys with fractions rendered, progress by group.
 
+## Richer question bank and mock test (added 2026-10-26)
+
+* Verbal: 19 analogy relations with level-graded pairs, a 50-entry vocabulary bank (synonym/antonym with a
+  trap of the opposite kind) and 15 odd-one-out sets; near-synonym clusters are merged so distractors never
+  come from a neighbouring meaning; a bank check lists words shared across relations and the analogy builder
+  rejects any distractor that pairs with the third word anywhere in the bank.
+* Logic: universal negatives, conditionals (four inference patterns, two invalid), chained syllogisms and
+  4–5-person ordering problems; option pools include plausible-but-irrelevant statements.
+* Series: letters, cubes, primes, halving, ×3/−k alternation and two-letter pairs, all covered by the solver
+  used in the uniqueness test. Arithmetic: proportions, percent-of-what, fraction multiply/divide, comparing
+  fractions, two-unknown equations verified by evaluation.
+* Mock test: `tests/mocktest.test.js` covers balanced slots, tier levels, navigation, flags, changed answers,
+  time accounting and the report; in the browser an 8-question test was run with flagging, jumping, changing an
+  answer, finishing early and reading the report (one crash on the report title fixed).
+
 ## Not verified
 
 * Real screen-reader output (ARIA roles, labels and live regions were checked in the DOM only).

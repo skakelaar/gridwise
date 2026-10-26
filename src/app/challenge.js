@@ -166,11 +166,13 @@ export function challengeReport(c) {
     timedOut,
     usedMs: Math.max(0, (c.finishedAt ?? Date.now()) - c.startedAt),
     limitMs: c.endsAt - c.startedAt,
-    secondsPer: secondsPer(c),
-    format: c.format || 'matrix',
+    secondsPer: c.kind === 'mock' ? null : secondsPer(c),
+    format: c.format || (c.kind === 'mock' ? 'mock' : 'matrix'),
+    adaptive: c.kind !== 'mock',
+    flagged: items.filter((i) => i.flagged).length,
     avgMs,
     levels,
-    finalLevel: c.level,
+    finalLevel: c.level ?? null,
     highest,
     correctAtHighest: highest == null ? 0 : reached.filter((i) => i.difficulty === highest && i.correct).length,
     groups,
@@ -184,10 +186,12 @@ export function challengeReport(c) {
 export function assessmentText(r) {
   const parts = [];
   parts.push(`You answered ${r.correct} of ${r.total} questions correctly${r.timedOut ? ` and ${r.timedOut} timed out` : ''}${r.notReached ? `; ${r.notReached} were not reached` : ''}.`);
-  if (r.highest != null) {
+  if (r.highest != null && r.adaptive === false) {
+    parts.push(`Levels ranged from ${Math.min(...r.levels)} to ${r.highest}; you were correct on ${r.correctAtHighest} of ${r.levels.filter((l) => l === r.highest).length} question${r.levels.filter((l) => l === r.highest).length === 1 ? '' : 's'} at level ${r.highest}.`);
+  } else if (r.highest != null) {
     parts.push(`The staircase took you as high as level ${r.highest} (${['', 'Basic', 'Intermediate', 'Advanced', 'Expert'][r.highest]}), where you were correct on ${r.correctAtHighest} of ${r.levels.filter((l) => l === r.highest).length} question${r.levels.filter((l) => l === r.highest).length === 1 ? '' : 's'}, and it finished at level ${r.finalLevel}.`);
   }
-  if (r.avgMs != null) parts.push(`Your average time per answered question was ${Math.round(r.avgMs / 1000)} seconds of the ${r.secondsPer} available.`);
+  if (r.avgMs != null) parts.push(`Your average time per answered question was ${Math.round(r.avgMs / 1000)} seconds${r.secondsPer ? ` of the ${r.secondsPer} available` : ''}.`);
   if (r.strongest.length) parts.push(`Every question was correct in: ${r.strongest.join(', ')}.`);
   if (r.weakest.length) parts.push(`No question was correct in: ${r.weakest.join(', ')}. Those are the groups to practise next.`);
   parts.push(`${r.total} questions is a small sample, so treat this as a snapshot of one sitting rather than a measure of ability.`);

@@ -12,6 +12,8 @@ export const KEYS = {
   timed: 'timed',         // in-progress or last finished timed session
   challenge: 'challenge', // in-progress adaptive challenge
   challengeHistory: 'challengeHistory', // finished challenges, newest last (capped)
+  mock: 'mock',                 // in-progress mock test
+  mockHistory: 'mockHistory',   // finished mock tests, newest last (capped)
 };
 
 const MAX_CHALLENGES = 20;
@@ -210,3 +212,18 @@ export function archiveChallenge(c) {
 export function findChallenge(id) {
   return loadChallengeHistory().find((x) => x.id === id) || null;
 }
+
+export function loadMock() {
+  const m = read(KEYS.mock, null);
+  return m && typeof m === 'object' && Array.isArray(m.items) ? m : null;
+}
+export function saveMock(m) { write(KEYS.mock, m); }
+export function clearMock() { remove(KEYS.mock); }
+export function loadMockHistory() { const list = read(KEYS.mockHistory, []); return Array.isArray(list) ? list : []; }
+export function archiveMock(m) {
+  const list = loadMockHistory().filter((x) => x.id !== m.id);
+  list.push(m);
+  while (list.length > MAX_CHALLENGES) list.shift();
+  write(KEYS.mockHistory, list);
+}
+export function findMock(id) { return loadMockHistory().find((x) => x.id === id) || null; }

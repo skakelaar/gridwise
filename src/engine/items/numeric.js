@@ -98,8 +98,124 @@ function equationFill(rng) {
   };
 }
 
+function ratio(rng) {
+  // a : b = ? : d  with the same scale factor
+  const k = rng.range(2, 6), a = rng.range(2, 9), b = rng.range(2, 9);
+  if (a === b) return null;
+  const d = b * k, x = a * k;
+  const wrong = [a + k, d - (b - a), b * k - a, x + k, a * b, d - a].filter((v) => v > 0 && v !== x && Number.isInteger(v));
+  const uniq = [...new Set(wrong)];
+  if (uniq.length < 4) return null;
+  const opts = [x, ...rng.shuffle(uniq).slice(0, 4)];
+  const order = rng.shuffle(opts.map((_, i) => i));
+  return {
+    question: 'Which number completes the proportion?',
+    prompt: `${a} : ${b} = ? : ${d}`,
+    options: order.map((i) => String(opts[i])),
+    correctIndex: order.indexOf(0),
+    explanation: { summary: `${x} keeps the two ratios equal.`, steps: [`${d} is ${b} × ${k}, so the missing number is ${a} × ${k} = ${x}.`, `Check: ${a}/${b} and ${x}/${d} both reduce to ${plainFrac(...simplify(a, b))}.`] },
+    hints: ['Find how the second ratio\'s known number was obtained from the first ratio.', `${b} became ${d}: by what factor?`, `Apply the same factor to ${a}.`],
+    features: { rule: 'ratio' },
+  };
+}
+
+function percentOfWhat(rng) {
+  const p = rng.pick([10, 20, 25, 40, 50, 60, 75, 80]);
+  const x = rng.pick([40, 60, 80, 120, 150, 200, 240, 300]);
+  const part = x * p / 100;
+  if (!Number.isInteger(part)) return null;
+  const wrong = [part * p / 100, x * p / 100, part + p, Math.round(part / (p / 100) * 1.5), x + part, p * part].filter((v) => v > 0 && v !== x && Number.isInteger(v));
+  const uniq = [...new Set(wrong)];
+  if (uniq.length < 4) return null;
+  const opts = [x, ...rng.shuffle(uniq).slice(0, 4)];
+  const order = rng.shuffle(opts.map((_, i) => i));
+  return {
+    question: 'Which number completes the statement?',
+    prompt: `${p} % of ? = ${part}`,
+    options: order.map((i) => String(opts[i])),
+    correctIndex: order.indexOf(0),
+    explanation: { summary: `${part} is ${p} % of ${x}.`, steps: [`If ${p} % of the number is ${part}, then 1 % is ${part / p}, so 100 % is ${x}.`] },
+    hints: ['Work out what 1 % would be first.', `${part} ÷ ${p} gives 1 %.`, 'Multiply that by 100.'],
+    features: { rule: 'percent-of-what' },
+  };
+}
+
+function compareFractions(rng) {
+  const dens = [3, 4, 5, 6, 7, 8, 9, 10, 12];
+  const fr = [];
+  let guard = 0;
+  while (fr.length < 5 && guard++ < 60) {
+    const d = rng.pick(dens), n = rng.range(1, d - 1);
+    const [sn, sd] = simplify(n, d);
+    if (!fr.some((f) => f[0] === sn && f[1] === sd) && !fr.some((f) => Math.abs(f[0] / f[1] - sn / sd) < 0.02)) fr.push([sn, sd]);
+  }
+  if (fr.length < 5) return null;
+  const values = fr.map(([n, d]) => n / d);
+  const max = Math.max(...values);
+  const correctIndex = values.indexOf(max);
+  return {
+    question: 'Which fraction is the largest?',
+    prompt: 'Compare the five fractions.',
+    options: fr.map(([n, d]) => frac(n, d)),
+    correctIndex,
+    explanation: { summary: `${plainFrac(...fr[correctIndex])} is the largest.`, steps: [`As decimals: ${fr.map(([n, d]) => `${plainFrac(n, d)} ≈ ${(n / d).toFixed(2)}`).join(', ')}.`] },
+    hints: ['Fractions above or below one half are quickly sorted; compare the rest more carefully.', 'Convert to decimals, or bring the close ones to a common denominator.', `The largest is ${plainFrac(...fr[correctIndex])}.`],
+    features: { rule: 'compare-fractions' },
+  };
+}
+
+function fractionMultiply(rng) {
+  const d1 = rng.pick([2, 3, 4, 5, 6]), d2 = rng.pick([2, 3, 4, 5, 6, 8]);
+  const n1 = rng.range(1, d1 - 1), n2 = rng.range(1, d2 - 1);
+  const divide = rng.chance(0.4);
+  const [rn, rd] = divide ? simplify(n1 * d2, d1 * n2) : simplify(n1 * n2, d1 * d2);
+  const key = (n, d) => `${n}/${d}`;
+  const wrongs = [simplify(n1 * n2, d1 * d2), simplify(n1 * d2, d1 * n2), simplify(n1 + n2, d1 + d2), simplify(n1 * d2 + n2 * d1, d1 * d2), [rn + 1, rd], simplify(n1 * n2, d1 + d2)]
+    .filter((w) => w[0] > 0 && w[1] > 0 && key(...w) !== key(rn, rd));
+  const uniq = []; for (const w of wrongs) if (!uniq.some((u) => key(...u) === key(...w))) uniq.push(w);
+  if (uniq.length < 4) return null;
+  const opts = [[rn, rd], ...uniq.slice(0, 4)];
+  const order = rng.shuffle(opts.map((_, i) => i));
+  return {
+    question: 'Which fraction is the result?',
+    prompt: `${frac(n1, d1)} ${divide ? '÷' : '×'} ${frac(n2, d2)} = ?`,
+    options: order.map((i) => fmtFrac(...opts[i])),
+    correctIndex: order.indexOf(0),
+    explanation: { summary: `The result is ${plainFrac(rn, rd)}.`, steps: divide ? [`Dividing by a fraction is multiplying by its reciprocal: ${n1}/${d1} × ${d2}/${n2} = ${n1 * d2}/${d1 * n2}${n1 * d2 !== rn ? `, which simplifies to ${plainFrac(rn, rd)}` : ''}.`] : [`Multiply numerators and denominators: ${n1 * n2}/${d1 * d2}${n1 * n2 !== rn ? `, which simplifies to ${plainFrac(rn, rd)}` : ''}.`] },
+    hints: [divide ? 'To divide by a fraction, flip it and multiply.' : 'Multiply the tops together and the bottoms together.', 'Then simplify by any common factor.', `The result is ${plainFrac(rn, rd)}.`],
+    features: { rule: divide ? 'fraction-divide' : 'fraction-multiply' },
+  };
+}
+
+function equationPair(rng) {
+  // (n ÷ a) ÷ (m + b) = r with two different unknowns; options are pairs "a and b"
+  const a = rng.range(2, 7), b = rng.range(1, 6), m = rng.range(1, 5), r = rng.range(2, 4);
+  if (a === b) return null;
+  const n = a * r * (m + b);
+  const evalAt = (x, y) => (n / x) / (m + y);
+  const pairs = [[a, b]];
+  const cands = [[b, a], [a, b + 1], [a + 1, b], [a - 1, b + 1], [b + 1, a], [a, m], [r, b], [a * 2, b]].filter(([x, y]) => x > 0 && y >= 0 && Math.abs(evalAt(x, y) - r) > 1e-9);
+  for (const c of rng.shuffle(cands)) if (pairs.length < 5 && !pairs.some((p) => p[0] === c[0] && p[1] === c[1])) pairs.push(c);
+  if (pairs.length < 5) return null;
+  const order = rng.shuffle(pairs.map((_, i) => i));
+  return {
+    question: 'Which pair of numbers makes the equation true (first question mark, then second)?',
+    prompt: `(${n} ÷ ?) ÷ (${m} + ?) = ${r}`,
+    options: order.map((i) => `${pairs[i][0]} and ${pairs[i][1]}`),
+    correctIndex: order.indexOf(0),
+    explanation: { summary: `${a} and ${b}.`, steps: [`(${n} ÷ ${a}) = ${n / a}. (${m} + ${b}) = ${m + b}. ${n / a} ÷ ${m + b} = ${r}.`, 'No other listed pair gives the right-hand side.'] },
+    hints: ['The two question marks are different numbers; each option gives them in order.', 'Work out the first bracket, then the second, then divide.', `${a} and ${b} give ${n / a} ÷ ${m + b} = ${r}.`],
+    features: { rule: 'equation-pair' },
+  };
+}
+
 export function buildNumeric(difficulty, rng) {
-  const pick = { 1: [equivalence, percent], 2: [percent, equivalence, fractionArith], 3: [fractionArith, equationFill], 4: [equationFill, fractionArith] }[Math.min(4, Math.max(1, difficulty))];
+  const pick = {
+    1: [equivalence, percent, ratio],
+    2: [percent, equivalence, fractionArith, ratio, percentOfWhat],
+    3: [fractionArith, equationFill, compareFractions, fractionMultiply, percentOfWhat],
+    4: [equationFill, equationPair, fractionArith, fractionMultiply, compareFractions],
+  }[Math.min(4, Math.max(1, difficulty))];
   const item = rng.pick(pick)(rng);
   if (!item) return null;
   if (new Set(item.options).size !== item.options.length) return null;

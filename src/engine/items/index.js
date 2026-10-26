@@ -7,13 +7,14 @@ import { buildSeries } from './series.js';
 import { buildLogic } from './logic.js';
 import { buildNumeric } from './numeric.js';
 import { buildAnalogy } from './analogy.js';
+import { buildVocab } from './vocab.js';
 import { markupToPlain } from './markup.js';
 
 export const ITEM_GROUPS = {
   series: { label: 'Number series' },
   logic: { label: 'Logical deduction' },
   numeric: { label: 'Fractions and arithmetic' },
-  verbal: { label: 'Verbal analogies' },
+  verbal: { label: 'Verbal reasoning' },
 };
 
 export const ITEM_FAMILIES = {
@@ -21,6 +22,7 @@ export const ITEM_FAMILIES = {
   logic: { group: 'logic', label: 'Logical deduction', kind: 'item', build: buildLogic },
   numeric: { group: 'numeric', label: 'Fractions and arithmetic', kind: 'item', build: buildNumeric },
   analogy: { group: 'verbal', label: 'Verbal analogies', kind: 'item', build: buildAnalogy },
+  vocab: { group: 'verbal', label: 'Vocabulary', kind: 'item', build: buildVocab },
 };
 export const ITEM_FAMILY_IDS = Object.keys(ITEM_FAMILIES);
 

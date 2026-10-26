@@ -3,11 +3,15 @@
 import { listNames } from '../text.js';
 
 export const SERIES_RULES = {
-  1: ['arith', 'arithNeg', 'geom', 'growingStep'],
-  2: ['fib', 'altOps', 'squares', 'squaresPlus'],
-  3: ['interleaved', 'pairwise', 'altAddSub'],
-  4: ['exponentPairs', 'secondDiff', 'linearRec'],
+  1: ['arith', 'arithNeg', 'geom', 'growingStep', 'halving'],
+  2: ['fib', 'altOps', 'squares', 'squaresPlus', 'letters', 'cubes'],
+  3: ['interleaved', 'pairwise', 'altAddSub', 'primes', 'lettersGrowing'],
+  4: ['exponentPairs', 'secondDiff', 'linearRec', 'triMix', 'letterPairs'],
 };
+
+const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const L = (n) => LETTERS[n - 1];
+const PRIMES = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61];
 
 const range = (n) => Array.from({ length: n }, (_, i) => i);
 
@@ -35,6 +39,13 @@ function build(rule, rng) {
       return { terms: t, next, how: `the numbers come in pairs: the second of each pair is the first divided by 2, plus ${c}`, misc: [pairs[2][0] / 2, pairs[2][0] / 2 - c, pairs[2][0] + c, pairs[2][0] / 2 + c + 1] };
     }
     case 'altAddSub': { const a = rng.range(10, 20), p = rng.range(3, 7), m = rng.range(1, p - 1); const t = [a]; for (let i = 1; i < 7; i++) t.push(i % 2 ? t[i - 1] + p : t[i - 1] - m); return { terms: t, how: `+${p} and −${m} alternate`, misc: [t[6] - m, t[6] + p + 1, t[6] + (t[6] - t[5]), t[6] + p - m] }; }
+    case 'halving': { const a = rng.pick([320, 640, 480, 960, 800]); const t = [a]; for (let i = 1; i < 6; i++) t.push(t[i - 1] / 2); if (!t.every(Number.isInteger)) return null; return { terms: t, how: 'each number is half the one before', misc: [t[5] / 2 + 1, t[5] - (t[4] - t[5]), t[5] / 4, t[5] / 2 - 1] }; }
+    case 'cubes': { const s = rng.range(1, 2); const t = range(5).map((i) => (s + i) ** 3); const n = s + 5; return { terms: t, how: `these are cube numbers (${s}³ = ${t[0]}, ${s + 1}³ = ${t[1]} …)`, misc: [n * n * n - 1, t[4] + (t[4] - t[3]), n * n, n * n * n + 1] }; }
+    case 'primes': { const start = rng.range(0, 6); const t = PRIMES.slice(start, start + 6); const next = PRIMES[start + 6]; return { terms: t, next, how: 'these are consecutive prime numbers', misc: [next + 1, t[5] + (t[5] - t[4]), next - 2 === t[5] ? next + 2 : next - 2, t[5] + 2] }; }
+    case 'letters': { const a = rng.range(1, 6), d = rng.range(2, 4); const nums = range(6).map((i) => a + i * d); if (nums[5] > 26) return null; return { terms: nums.slice(0, 5).map(L), next: L(nums[5]), textual: true, how: `the letters move ${d} places along the alphabet each time`, misc: [L(nums[5] - 1), L(nums[5] + 1), L(nums[4] + d + d), L(nums[5] - d + 1)].filter((x) => x), numeric: nums.slice(0, 5), nextNumeric: nums[5] }; }
+    case 'lettersGrowing': { const a = rng.range(1, 3), s = rng.range(1, 2); const nums = [a]; for (let i = 1; i < 6; i++) nums.push(nums[i - 1] + s + i - 1); if (nums[5] > 26) return null; return { terms: nums.slice(0, 5).map(L), next: L(nums[5]), textual: true, how: `the gaps between the letters grow by one each time (+${s}, +${s + 1}, +${s + 2} …)`, misc: [L(nums[5] - 1), L(nums[5] + 1), L(nums[4] + (nums[4] - nums[3])), L(nums[5] + 2)].filter((x) => x), numeric: nums.slice(0, 5), nextNumeric: nums[5] }; }
+    case 'letterPairs': { const a = rng.range(1, 4), d = rng.range(2, 3), b = 26 - rng.range(0, 3); const terms = []; for (let i = 0; i < 4; i++) terms.push(`${L(a + i * d)}${L(b - i * 2)}`); const nb = a + 4 * d, ne = b - 8; if (nb > 26 || ne < 1) return null; return { terms, next: `${L(nb)}${L(ne)}`, textual: true, how: `two letter series run together: the first letter moves ${d} places forward, the second moves 2 places back`, misc: [`${L(nb)}${L(ne + 1)}`, `${L(nb - 1)}${L(ne)}`, `${L(nb + 1)}${L(ne - 1)}`, `${L(nb)}${L(ne - 1)}`], numeric: range(4).map((i) => a + i * d), nextNumeric: nb, numeric2: range(4).map((i) => b - i * 2), nextNumeric2: ne }; }
+    case 'triMix': { const a = rng.range(2, 5), k = rng.range(1, 3); const t = [a]; for (let i = 1; i < 6; i++) t.push(i % 2 ? t[i - 1] * 3 : t[i - 1] - k); return { terms: t, how: `the operations alternate: ×3, then −${k}, then ×3 …`, misc: [t[5] - k, t[5] * 3 - k, t[5] + (t[5] - t[4]), t[5] * 3 + k] }; }
     case 'exponentPairs': {
       const bases = []; const b0 = rng.range(1, 3), bd = rng.range(1, 3); const e0 = 15 + rng.range(0, 6);
       const steps = []; for (let i = 0; i < 4; i++) { bases.push(i === 0 ? b0 : bases[i - 1] + bd + i - 1); }
@@ -76,9 +87,17 @@ export function predictNumeric(t) {
     const o0 = ops.filter((_, i) => i % 2 === 0), o1 = ops.filter((_, i) => i % 2 === 1);
     if (o0.every((v) => v === 'x2') && o1.every((v) => v === o1[0]) && o1[0] !== 'x2') { const nextOp = ops.length % 2 === 0 ? 'x2' : o1[0]; add('alternating ×2 and +k', nextOp === 'x2' ? t[n - 1] * 2 : t[n - 1] + Number(nextOp)); }
     if (o1.every((v) => v === 'x2') && o0.every((v) => v === o0[0]) && o0[0] !== 'x2') { const nextOp = ops.length % 2 === 0 ? o0[0] : 'x2'; add('alternating +k and ×2', nextOp === 'x2' ? t[n - 1] * 2 : t[n - 1] + Number(nextOp)); }
+    const ops3 = t.slice(1).map((v, i) => (v === t[i] * 3 ? 'x3' : `+${v - t[i]}`));
+    const p0 = ops3.filter((_, i) => i % 2 === 0), p1 = ops3.filter((_, i) => i % 2 === 1);
+    if (p0.every((v) => v === 'x3') && p1.every((v) => v === p1[0]) && p1[0] !== 'x3') { const nextOp = ops3.length % 2 === 0 ? 'x3' : p1[0]; add('alternating ×3 and ±k', nextOp === 'x3' ? t[n - 1] * 3 : t[n - 1] + Number(nextOp)); }
+    if (p1.every((v) => v === 'x3') && p0.every((v) => v === p0[0]) && p0[0] !== 'x3') { const nextOp = ops3.length % 2 === 0 ? p0[0] : 'x3'; add('alternating ±k and ×3', nextOp === 'x3' ? t[n - 1] * 3 : t[n - 1] + Number(nextOp)); }
   }
   // pairwise: second of each pair = first/2 + c (odd length: next completes a pair)
   if (n % 2 === 1 && n >= 5) { const cs = []; for (let i = 0; i + 1 < n; i += 2) cs.push(t[i + 1] - t[i] / 2); if (cs.every((c) => c === cs[0]) && isInt(cs[0])) add('half plus constant', t[n - 1] / 2 + cs[0]); }
+  // cubes
+  { const roots = t.map((v) => Math.round(Math.cbrt(v))); if (roots.every((r, i) => r > 0 && r ** 3 === t[i]) && roots.slice(1).every((r, i) => r === roots[i] + 1)) add('cubes', (roots[n - 1] + 1) ** 3); }
+  // consecutive primes
+  { const idx = PRIMES.indexOf(t[0]); if (idx >= 0 && t.every((v, i) => PRIMES[idx + i] === v) && PRIMES[idx + n] != null) add('primes', PRIMES[idx + n]); }
   // squares (+k)
   for (const k of [-1, 0, 1, 2, 3]) { const roots = t.map((v) => Math.sqrt(v - k)); if (roots.every((r) => isInt(r) && r > 0) && roots.slice(1).every((r, i) => r === roots[i] + 1)) add(`squares${k ? (k > 0 ? '+' : '−') + Math.abs(k) : ''}`, (roots[n - 1] + 1) ** 2 + k); }
   return preds;
@@ -96,9 +115,13 @@ export function buildSeries(difficulty, rng) {
   else if (next != null) { shown = terms; answer = next; }
   else { shown = terms.slice(0, -1); answer = terms[terms.length - 1]; }
   // uniqueness within the numeric grammar
-  if (s.textual) {
+  if (s.textual && s.baseSeq) {
     const pb = predictNumeric(s.baseSeq), pe = predictNumeric(s.expSeq);
     if (pb.size !== 1 || !pb.has(s.nextBase) || pe.size !== 1 || !pe.has(s.nextExp)) return null;
+  } else if (s.textual && s.numeric) {
+    const p1 = predictNumeric(s.numeric);
+    if (p1.size !== 1 || !p1.has(s.nextNumeric)) return null;
+    if (s.numeric2) { const p2 = predictNumeric(s.numeric2); if (p2.size !== 1 || !p2.has(s.nextNumeric2)) return null; }
   } else {
     const preds = predictNumeric(shown);
     if (preds.size !== 1 || !preds.has(answer)) return null;
@@ -107,16 +130,17 @@ export function buildSeries(difficulty, rng) {
   const opts = [answer];
   for (const m of s.misc) if (!opts.includes(m) && (s.textual || (isInt(m) && m > 0))) opts.push(m);
   let guard = 0;
-  while (opts.length < 5 && guard++ < 20) { const m = s.textual ? `${s.nextBase + guard}{sup ${s.nextExp}}` : answer + rng.pick([-3, -2, 2, 3, 4, 5]) * (guard % 2 ? 1 : 2); if (!opts.includes(m) && (s.textual || m > 0)) opts.push(m); }
+  while (opts.length < 5 && guard++ < 20) { const m = s.textual ? (s.baseSeq ? `${s.nextBase + guard}{sup ${s.nextExp}}` : `${LETTERS[(s.nextNumeric + guard) % 26]}`) : answer + rng.pick([-3, -2, 2, 3, 4, 5]) * (guard % 2 ? 1 : 2); if (!opts.includes(m) && (s.textual || m > 0)) opts.push(m); }
   if (opts.length < 5) return null;
   const order = rng.shuffle(opts.map((_, i) => i));
   const options = order.map((i) => String(opts[i]));
   const correctIndex = order.indexOf(0);
   const promptTerms = shown.map(String).join(' -- ') + ' -- ...';
+  const isLetters = s.numeric && !s.baseSeq;
   const fmt = (v) => String(v).replace(/\{sup ([^}]+)\}/g, '^$1');
   return {
     rule,
-    question: 'Which number completes the series?',
+    question: isLetters ? 'Which letters complete the series?' : 'Which number completes the series?',
     prompt: promptTerms,
     options,
     correctIndex,
@@ -125,6 +149,6 @@ export function buildSeries(difficulty, rng) {
       steps: [`Shown: ${shown.map(fmt).join(', ')}.`, `Applying the rule once more gives ${fmt(answer)}.`],
     },
     hints: ['Look at the differences (or ratios) between neighbouring numbers first.', 'If no single step fits, test two interleaved series or a rule that works in pairs.', `Rule: ${s.how}.`],
-    features: { rule },
+    features: { rule, letters: !!isLetters },
   };
 }

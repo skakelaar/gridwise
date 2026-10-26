@@ -7,6 +7,7 @@ import * as session from './session.js';
 import * as ui from './ui.js';
 import { createCountdown } from './timer.js';
 import * as challenge from './challenge.js';
+import * as mock from './mocktest.js';
 import { summarise, byGroup, byDifficulty, formatClock } from './stats.js';
 
 const app = document.getElementById('app');
@@ -40,6 +41,7 @@ const ROUTES = {
   settings: showSettings,
   about: showAbout,
   challenge: showChallenge,
+  mock: showMock,
 };
 
 let teardown = null; // cleanup for the active screen (timers, listeners)
@@ -469,6 +471,127 @@ function showChallengeReport(id) {
   if (!c) return mount(ui.renderError('No challenge report found. Start a challenge to get one.'), { title: 'Challenge report' });
   const puzzles = c.items.map((item) => (item.difficulty == null ? null : session.puzzleFor(item)));
   mount(ui.renderChallengeReport({ challenge: c, report: challenge.challengeReport(c), puzzles }), { title: 'Challenge report' });
+}
+
+// ---------------------------------------------------------------- mock test (free navigation, one clock)
+
+let mockState = null;
+
+function loadMock() {
+  if (!mockState) mockState = storage.loadMock();
+  return mockState;
+}
+function persistMock() { if (mockState) storage.saveMock(mockState); }
+
+function settleMock(m) {
+  if (m && !m.finished && Date.now() >= m.endsAt) { mock.finishMock(m, 'time', m.endsAt); }
+  if (m && m.finished) { finaliseMock(m); }
+  return m;
+}
+
+function finaliseMock(m) {
+  if (!m._logged) {
+    for (const attempt of mock.mockAttempts(m, m.finishedAt || Date.now())) {
+      const item = m.items.find((i) => i.seed === attempt.seed && i.family === attempt.family);
+      recordAttempt(session.puzzleFor(item), attempt);
+    }
+    m._logged = true;
+  }
+  storage.archiveMock(m);
+  storage.clearMock();
+  mockState = null;
+}
+
+function showMock(parts) {
+  const sub = parts[0];
+  if (sub === 'run') return showMockRun();
+  if (sub === 'report') return showMockReport(parts[1]);
+  const existing = settleMock(loadMock());
+  const resumable = existing && !existing.finished ? existing : null;
+  const settings = storage.loadSettings();
+  mount(ui.renderMockSetup({ settings, resumable, history: storage.loadMockHistory() }, {
+    onStart: ({ count, minutes, tier }) => {
+      storage.saveSettings({ mockCount: count, mockMinutes: minutes, mockTier: tier });
+      mockState = mock.createMock({ count, minutes, tier });
+      persistMock();
+      navigate('#/mock/run');
+    },
+    onResume: () => navigate('#/mock/run'),
+    onDiscard: () => { mockState = null; storage.clearMock(); showMock([]); ui.announce('Mock test discarded.'); },
+  }), { title: 'Mock test' });
+}
+
+function showMockRun() {
+  const m = loadMock();
+  if (!m) return navigate('#/mock', { replace: true });
+  settleMock(m);
+  if (m.finished) return navigate(`#/mock/report/${m.id}`, { replace: true });
+  renderMockQuestion(m, { focus: 'title' });
+}
+
+function endMock(m, reason) {
+  mock.finishMock(m, reason);
+  finaliseMock(m);
+  navigate(`#/mock/report/${m.id}`, { replace: true });
+  ui.announce(reason === 'time' ? 'Time is up. Showing your report.' : 'Test finished. Showing your report.');
+}
+
+function renderMockQuestion(m, { focus } = {}) {
+  const puzzle = mock.mockPuzzle(m);
+  const item = m.items[m.index];
+  const goTo = (i) => { mock.mockGoTo(m, i); persistMock(); renderMockQuestion(m, { focus: 'title' }); ui.announce(`Question ${m.index + 1} of ${m.items.length}.`); };
+  const handlers = {
+    onSelect: (i) => { mock.mockAnswer(m, i); persistMock(); ui.setSelectedOption(app, i); },
+    onSubmit: () => { if (m.index < m.items.length - 1) goTo(m.index + 1); },
+    onNext: () => goTo(m.index + 1),
+    onPrev: () => goTo(m.index - 1),
+    onJump: (i) => goTo(i),
+    onFlag: () => { const on = mock.mockToggleFlag(m); persistMock(); renderMockQuestion(m, { focus: 'flag' }); ui.announce(on ? 'Saved for later.' : 'Removed from saved questions.'); },
+    onFinish: () => endMock(m, 'finished'),
+    onStop: () => endMock(m, 'finished'),
+  };
+  const progress = mock.mockProgress(m);
+  const model = {
+    puzzle,
+    mode: 'mock',
+    mock: m,
+    heading: 'Mock test',
+    progress: `Question ${m.index + 1} of ${m.items.length} · ${progress.answered} answered`,
+    selected: item.chosenIndex,
+    answered: null,
+    revealed: false,
+    showHints: false,
+    showCountdown: true,
+    countdownLabel: 'Time remaining',
+    canSkip: false,
+  };
+  mount(ui.renderPuzzleScreen(model, handlers), { title: `Mock test – question ${m.index + 1}`, focusTitle: focus === 'title' });
+  if (focus === 'flag') document.getElementById('flag-btn')?.focus();
+  const endEarly = document.getElementById('end-early');
+  if (endEarly) endEarly.remove(); // the "I am finished" control replaces it
+  installNumberKeys(() => ({ select: handlers.onSelect }));
+  const clock = document.getElementById('countdown');
+  const countdown = createCountdown({
+    endsAt: m.endsAt,
+    onTick: (s) => { if (clock) clock.textContent = formatClock(s); },
+    onAnnounce: (mark) => ui.announce(mark >= 60 ? `${Math.round(mark / 60)} minute remaining.` : `${mark} seconds remaining.`),
+    onEnd: () => endMock(m, 'time'),
+  }).start();
+  const prev = teardown;
+  teardown = () => { countdown.stop(); if (prev) prev(); };
+}
+
+function showMockReport(id) {
+  let m = id ? storage.findMock(id) : null;
+  if (!m) {
+    const live = settleMock(loadMock());
+    if (live && !live.finished) return navigate('#/mock/run', { replace: true });
+    const hist = storage.loadMockHistory();
+    m = id ? storage.findMock(id) : hist[hist.length - 1];
+  }
+  if (!m) return mount(ui.renderError('No mock test report found. Start a mock test to get one.'), { title: 'Mock test report' });
+  const puzzles = m.items.map((item) => session.puzzleFor(item));
+  mount(ui.renderChallengeReport({ challenge: m, report: challenge.challengeReport(m), puzzles }), { title: 'Mock test report' });
 }
 
 // ---------------------------------------------------------------- mistake review

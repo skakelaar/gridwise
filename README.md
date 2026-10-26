@@ -57,6 +57,12 @@ Besides matrices, Gridwise generates number series, logical deduction (syllogism
 fractions, percentages and equation filling, and verbal analogies, all original and seeded. They appear in
 practice (family filter "Everything" or "Other question types") and in the mixed challenge. See `docs/RULES.md`.
 
+## Mock test
+
+`#/mock`: a fixed set of questions (default 16 in 8 minutes, level tier Standard 1–2, Higher 3–4 or Mixed) on one
+clock, with Previous/Next, "Save this question for later", a jump list, answers that can be changed, and
+"I am finished". The report is the same as the challenge report (assessment, memorandum, explanations).
+
 ## Challenge
 
 `#/challenge`: two formats, "12 matrices in 12 minutes" (60 s each, every rule group twice) and "16 mixed

@@ -7,6 +7,7 @@ import {
   STATS_CAVEAT, PERSONALISATION_NOTE, LIMITATIONS, CHALLENGE_NOTE,
 } from './content.js';
 import { CHALLENGE_FORMATS, assessmentText } from './challenge.js';
+import { MOCK_TIERS, MOCK_DEFAULTS } from './mocktest.js';
 import { formatPercent, formatMs, formatClock, SMALL_SAMPLE } from './stats.js';
 import { describeFilter } from './session.js';
 
@@ -109,6 +110,7 @@ export function renderHome({ samplePuzzle }) {
     { href: '#/practice', title: PRACTICE_MODES.untimed.title, blurb: PRACTICE_MODES.untimed.blurb },
     { href: '#/timed', title: PRACTICE_MODES.timed.title, blurb: PRACTICE_MODES.timed.blurb },
     { href: '#/challenge', title: PRACTICE_MODES.challenge.title, blurb: PRACTICE_MODES.challenge.blurb },
+    { href: '#/mock', title: PRACTICE_MODES.mock.title, blurb: PRACTICE_MODES.mock.blurb },
     { href: '#/review', title: PRACTICE_MODES.review.title, blurb: PRACTICE_MODES.review.blurb },
     { href: '#/progress', title: 'Progress', blurb: 'Accuracy and response times by rule group and difficulty.' },
     { href: '#/settings', title: 'Settings and reset', blurb: 'Practice personalisation and clearing local data.' },
@@ -191,6 +193,7 @@ export function renderPracticeBar({ settings, adaptive, onFamily, onDifficulty }
 const OPTION_NUMBERS = ['1', '2', '3', '4', '5', '6'];
 
 function isDone(model) {
+  if (model.mode === 'mock') return false;
   return model.mode === 'summary' || model.revealed || (model.answered != null && model.mode !== 'timed');
 }
 
@@ -449,7 +452,31 @@ export function renderPuzzleScreen(model, handlers) {
     h('h2', { class: 'options-title' }, done ? 'Options' : isItem ? puzzle.question : 'Which option completes the pattern?'),
     options,
   );
-  if (!done) {
+  if (!done && model.mode === 'mock') {
+    const m = model.mock;
+    const nav = h('div', { class: 'mock-nav' },
+      h('button', { type: 'button', class: 'btn', id: 'prev-btn', disabled: m.index === 0 ? '' : null, onClick: handlers.onPrev }, 'Previous'),
+      h('button', { type: 'button', class: 'btn btn-primary', id: 'submit-btn', disabled: m.index >= m.items.length - 1 ? '' : null, onClick: handlers.onNext }, 'Next'),
+      h('button', { type: 'button', class: `btn btn-small${m.items[m.index].flagged ? ' is-flagged' : ''}`, id: 'flag-btn', 'aria-pressed': m.items[m.index].flagged ? 'true' : 'false', onClick: handlers.onFlag }, m.items[m.index].flagged ? 'Saved for later ✓' : 'Save this question for later'),
+      h('button', { type: 'button', class: 'btn btn-small', id: 'finish-btn', onClick: (ev) => {
+        const b = ev.currentTarget;
+        if (b.dataset.armed === '1') { handlers.onFinish(); return; }
+        b.dataset.armed = '1'; b.textContent = 'Press again to finish'; b.classList.add('btn-danger');
+        b.addEventListener('blur', () => { b.dataset.armed = ''; b.textContent = 'I am finished'; b.classList.remove('btn-danger'); }, { once: true });
+      } }, 'I am finished'),
+    );
+    const flagged = m.items.map((it, k) => (it.flagged ? k : -1)).filter((k) => k >= 0);
+    const unanswered = m.items.map((it, k) => (it.chosenIndex == null ? k : -1)).filter((k) => k >= 0);
+    const jump = h('select', { class: 'select mock-jump', 'aria-label': 'Jump to a question', onChange: (e) => { if (e.target.value !== '') handlers.onJump(Number(e.target.value)); } },
+      h('option', { value: '' }, `Jump to… (${flagged.length} saved, ${unanswered.length} unanswered)`),
+      flagged.length ? h('optgroup', { label: 'Saved for later' }, flagged.map((k) => h('option', { value: String(k) }, `Question ${k + 1}`))) : null,
+      unanswered.length ? h('optgroup', { label: 'Unanswered' }, unanswered.map((k) => h('option', { value: String(k) }, `Question ${k + 1}`))) : null,
+      h('optgroup', { label: 'All questions' }, m.items.map((it, k) => h('option', { value: String(k) }, `Question ${k + 1}${it.chosenIndex != null ? ' (answered)' : ''}`))),
+    );
+    optionsWrap.appendChild(nav);
+    optionsWrap.appendChild(jump);
+    optionsWrap.appendChild(h('p', { class: 'submit-msg', role: 'status' }));
+  } else if (!done) {
     const actions = h('div', { class: 'actions' },
       h('button', { type: 'button', class: 'btn btn-primary', id: 'submit-btn', onClick: handlers.onSubmit }, model.mode === 'timed' || model.mode === 'challenge' ? 'Submit and continue' : 'Check answer'),
       model.canSkip ? h('button', { type: 'button', class: 'btn', onClick: handlers.onSkip }, 'Skip (leave unanswered)') : null,
@@ -814,11 +841,14 @@ function answerKey(puzzle, item, index) {
 }
 
 export function renderChallengeReport({ challenge, report, puzzles }) {
-  const fmt = CHALLENGE_FORMATS[report.format] || CHALLENGE_FORMATS.matrix;
-  const endedText = { completed: `All ${report.total} questions were presented.`, time: 'The time ran out.', stopped: 'Ended early.' }[report.endedBy] || '';
+  const isMock = report.format === 'mock';
+  const fmt = isMock
+    ? { label: `Mock test · ${(MOCK_TIERS[challenge.tier] || MOCK_TIERS.mixed).label} · ${challenge.items.length} questions in ${challenge.minutes} min`, rule: 'Not adaptive: every question\'s level was fixed when the test was created, so the path below simply shows the levels in order.' }
+    : (CHALLENGE_FORMATS[report.format] || CHALLENGE_FORMATS.matrix);
+  const endedText = { completed: `All ${report.total} questions were presented.`, time: 'The time ran out.', stopped: 'Ended early.', finished: 'You finished before the clock ran out.' }[report.endedBy] || '';
   const memoRows = challenge.items.map((item, i) => {
     const p = puzzles[i];
-    const result = item.timedOut ? 'Timed out' : item.chosenIndex == null ? 'Not reached' : item.correct ? 'Correct' : 'Incorrect';
+    const result = item.timedOut ? 'Timed out' : item.chosenIndex == null ? (isMock ? 'Unanswered' : 'Not reached') : item.correct ? 'Correct' : 'Incorrect';
     const cls = item.correct ? 'is-correct' : item.chosenIndex == null ? 'is-unanswered' : 'is-wrong';
     return h('tr', { class: item.correct ? '' : 'is-miss' },
       h('td', null, String(i + 1)),
@@ -837,12 +867,12 @@ export function renderChallengeReport({ challenge, report, puzzles }) {
     h('td', null, `${g.correct} / ${g.attempted}`),
   ));
   return h('section', { class: 'screen challenge-report' },
-    screenTitle('Challenge report'),
+    screenTitle(isMock ? 'Mock test report' : 'Challenge report'),
     h('p', { class: 'lead' }, `${fmt.label}. ${endedText} ${formatDate(new Date(challenge.startedAt).toISOString())}.`),
     h('div', { class: 'stat-tiles' },
-      statTile('Score', `${report.correct} / ${report.total}`, `${report.wrong} incorrect · ${report.timedOut} timed out · ${report.notReached} not reached`),
+      statTile('Score', `${report.correct} / ${report.total}`, isMock ? `${report.wrong} incorrect · ${report.total - report.answered} unanswered` : `${report.wrong} incorrect · ${report.timedOut} timed out · ${report.notReached} not reached`),
       statTile('Highest level', report.highest == null ? '–' : `${report.highest}`, report.highest == null ? '' : DIFFICULTY_LABELS[report.highest]),
-      statTile('Average time', report.avgMs == null ? '–' : `${Math.round(report.avgMs / 1000)} s`, `per answered question (${report.secondsPer} s available)`),
+      statTile('Average time', report.avgMs == null ? '–' : `${Math.round(report.avgMs / 1000)} s`, report.secondsPer ? `per answered question (${report.secondsPer} s available)` : 'per answered question'),
       statTile('Time used', formatMs(report.usedMs), `of ${Math.round(report.limitMs / 60000)} min`),
     ),
     h('h2', null, 'Assessment'),
@@ -857,7 +887,7 @@ export function renderChallengeReport({ challenge, report, puzzles }) {
         h('tbody', null, groupRows),
       ),
     ),
-    h('p', { class: 'note-small caveat' }, CHALLENGE_NOTE),
+    h('p', { class: 'note-small caveat' }, isMock ? CHALLENGE_NOTE.replace('This challenge', 'This mock test').replace('The up-and-down difficulty rule is stated in full below; it', 'It') : CHALLENGE_NOTE),
     h('h2', null, 'Memorandum'),
     h('div', { class: 'table-wrap' },
       h('table', { class: 'table memo' },
@@ -874,10 +904,60 @@ export function renderChallengeReport({ challenge, report, puzzles }) {
       return wrap;
     })),
     h('div', { class: 'actions' },
-      link('#/challenge', 'New challenge', 'btn btn-primary'),
+      link(isMock ? '#/mock' : '#/challenge', isMock ? 'New mock test' : 'New challenge', 'btn btn-primary'),
       link('#/review', 'Mistake review'),
       link('#/progress', 'See progress'),
       link('#/', 'Home'),
     ),
+  );
+}
+
+
+// ---------------------------------------------------------------- mock test setup
+
+export function renderMockSetup({ settings, resumable, history }, handlers) {
+  const state = { count: settings.mockCount || MOCK_DEFAULTS.count, minutes: settings.mockMinutes || MOCK_DEFAULTS.minutes, tier: settings.mockTier || MOCK_DEFAULTS.tier };
+  const past = history.slice().reverse();
+  const form = h('form', { class: 'timed-form', onSubmit: (e) => { e.preventDefault(); handlers.onStart({ ...state }); } },
+    h('fieldset', null,
+      h('legend', null, 'Set up the test'),
+      h('div', { class: 'field-row' },
+        h('div', { class: 'field' }, h('label', { for: 'mock-count' }, 'Questions (6–40)'), h('input', { id: 'mock-count', class: 'input', type: 'number', min: '6', max: '40', value: String(state.count), onInput: (e) => { state.count = Number(e.target.value); } })),
+        h('div', { class: 'field' }, h('label', { for: 'mock-minutes' }, 'Minutes (1–60)'), h('input', { id: 'mock-minutes', class: 'input', type: 'number', min: '1', max: '60', value: String(state.minutes), onInput: (e) => { state.minutes = Number(e.target.value); } })),
+        h('div', { class: 'field' }, h('label', { for: 'mock-tier' }, 'Level tier'), (() => { const sel = h('select', { id: 'mock-tier', class: 'select', onChange: (e) => { state.tier = e.target.value; } }, Object.values(MOCK_TIERS).map((t) => h('option', { value: t.id }, t.label))); sel.value = state.tier; return sel; })()),
+      ),
+      h('p', { class: 'note-small' }, 'Half of the questions are matrices; the rest are spread over number series, logical deduction, fractions and arithmetic, and verbal reasoning. Levels are drawn from the chosen tier and fixed in advance.'),
+    ),
+    h('div', { class: 'actions' },
+      h('button', { type: 'submit', class: 'btn btn-primary btn-lg' }, 'Start the mock test'),
+      link('#/', 'Back to home'),
+    ),
+  );
+  return h('section', { class: 'screen mock-setup' },
+    screenTitle('Mock test'),
+    h('p', { class: 'lead' }, 'Answer in any order on one overall clock: move back and forth, save questions for later, change your mind, then press "I am finished". The report shows every answer with its explanation.'),
+    h('div', { class: 'notice' }, h('p', null, CHALLENGE_NOTE.replace('This challenge', 'This mock test'))),
+    resumable
+      ? h('div', { class: 'banner' },
+          h('p', null, h('strong', null, 'A mock test is in progress. '), `${resumable.items.filter((i) => i.chosenIndex != null).length} of ${resumable.items.length} answered.`),
+          h('div', { class: 'actions' },
+            h('button', { type: 'button', class: 'btn btn-primary', onClick: handlers.onResume }, 'Resume test'),
+            h('button', { type: 'button', class: 'btn btn-danger', onClick: handlers.onDiscard }, 'Discard it'),
+          ))
+      : form,
+    past.length
+      ? h('section', null,
+          h('h2', null, 'Previous mock tests'),
+          h('ul', { class: 'mistake-list' }, past.map((m) => {
+            const correct = m.items.filter((i) => i.correct).length;
+            return h('li', { class: 'mistake challenge-row' },
+              h('div', { class: 'mistake-text' },
+                h('span', { class: 'mistake-title' }, `${correct} / ${m.items.length} correct · ${(MOCK_TIERS[m.tier] || MOCK_TIERS.mixed).label}`),
+                h('span', { class: 'mistake-meta' }, `${formatDate(new Date(m.startedAt).toISOString())} · ${m.items.length} questions in ${m.minutes} min`),
+              ),
+              h('div', { class: 'mistake-actions' }, h('a', { class: 'btn btn-small', href: `#/mock/report/${m.id}` }, 'Open report')),
+            );
+          })))
+      : null,
   );
 }
