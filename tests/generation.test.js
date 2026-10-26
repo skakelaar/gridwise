@@ -91,7 +91,7 @@ test('difficulty follows documented structural features', () => {
         const p3 = generatePuzzle({ family, difficulty: 3, seed });
         const p4 = generatePuzzle({ family, difficulty: 4, seed });
         assert.equal(p1.features.palette, 'lines');
-        assert.equal(p1.features.orientation, 'row');
+        if (!FAMILIES[family].framing) assert.equal(p1.features.orientation, 'row');
         assert.equal(p3.features.palette, 'dots');
         assert.equal(p4.features.palette, 'dots');
         assert.equal(p4.features.maxSetSize, 6);

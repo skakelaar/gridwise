@@ -23,7 +23,7 @@ export function createMock({ count = MOCK_DEFAULTS.count, minutes = MOCK_DEFAULT
   const n = Math.min(40, Math.max(6, Math.round(Number(count) || MOCK_DEFAULTS.count)));
   const mins = Math.min(60, Math.max(1, Number(minutes) || MOCK_DEFAULTS.minutes));
   const levels = (MOCK_TIERS[tier] || MOCK_TIERS.mixed).levels;
-  const matrixGroups = Object.keys(GROUPS);
+  const matrixGroups = [...Object.keys(GROUPS), 'global']; // whole-matrix patterns count double
   const itemGroups = ['series', 'logic', 'numeric', 'verbal'];
   const slots = [];
   const half = Math.ceil(n / 2);

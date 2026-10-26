@@ -699,7 +699,7 @@ export function renderReviewList({ mistakes, embedded = false }, handlers) {
 
 // ---------------------------------------------------------------- progress
 
-function statsTable(caption, rows) {
+function statsTable(caption, rows, { drill = false, onDrill = null } = {}) {
   return h('div', { class: 'table-wrap' },
     h('table', { class: 'table stats-table' },
       h('caption', null, caption),
@@ -712,13 +712,16 @@ function statsTable(caption, rows) {
           h('span', { class: 'bar-text' }, formatPercent(r.accuracy)),
         ),
         h('td', null, formatMs(r.medianMs)),
-        h('td', null, r.smallSample ? h('span', { class: 'small-sample' }, r.attempted ? 'small sample' : 'no data') : ''),
+        h('td', { class: 'cell-actions' },
+          r.smallSample ? h('span', { class: 'small-sample' }, r.attempted ? 'small sample' : 'no data') : null,
+          drill ? h('button', { type: 'button', class: 'btn btn-small', onClick: () => onDrill(r.id) }, 'Drill', h('span', { class: 'visually-hidden' }, ` ${r.label}`)) : null,
+        ),
       ))),
     ),
   );
 }
 
-export function renderProgress({ overall, groups, difficulties, embedded = false }) {
+export function renderProgress({ overall, groups, difficulties, weakest, embedded = false }, handlers = {}) {
   return h('section', { class: 'screen progress' },
     embedded ? null : screenTitle('Progress'),
     h('p', { class: 'lead caveat' }, STATS_CAVEAT, ` Rows with fewer than ${SMALL_SAMPLE} attempts are marked “small sample”.`),
@@ -727,7 +730,13 @@ export function renderProgress({ overall, groups, difficulties, embedded = false
       statTile('Overall accuracy', formatPercent(overall.accuracy), `${overall.correct} correct`),
       statTile('Median response time', formatMs(overall.medianMs), ''),
     ),
-    statsTable('By rule group', groups),
+    weakest
+      ? h('div', { class: 'banner' },
+          h('p', null, h('strong', null, 'Weakest group: '), `${weakest.label} (${formatPercent(weakest.accuracy)} over ${weakest.attempted} attempts). `, 'A drill sets Practise to that group, mixed levels, with a 45-second clock.'),
+          h('div', { class: 'actions' }, h('button', { type: 'button', class: 'btn btn-primary', onClick: () => handlers.onDrill(weakest.id) }, 'Drill my weak spots')),
+        )
+      : null,
+    statsTable('By rule group', groups, { drill: true, onDrill: handlers.onDrill || (() => {}) }),
     statsTable('By difficulty', difficulties),
     h('div', { class: 'actions' }, link('#/practice', 'Practise more', 'btn btn-primary'), link('#/', 'Home')),
   );

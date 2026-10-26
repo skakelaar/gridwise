@@ -35,6 +35,7 @@ export const FAMILIES = {
   intersection: { group: 'set', label: 'Intersection', kind: 'set', op: 'intersection' },
   xor:          { group: 'set', label: 'Exclusive-or', kind: 'set', op: 'xor' },
   neither:      { group: 'set', label: 'Neither (complement)', kind: 'set', op: 'neither' },
+  contains:     { group: 'arithmetic', label: 'Top contains the two below', kind: 'set', op: 'subtract', framing: 'contains' },
   combination:  { group: 'combination', label: 'Combination', kind: 'figure', core: null },
   path:         { group: 'global', label: 'Snake and spiral counts', kind: 'global', build: 'path' },
   split:        { group: 'global', label: 'Three of each (divided boxes)', kind: 'global', build: 'split' },
@@ -477,7 +478,7 @@ function genPair(op, elements, sizes, rng) {
 function buildSetPuzzle(family, fam, difficulty, rng) {
   const op = fam.op;
   const palette = difficulty === 1 ? 'lines' : difficulty === 2 ? rng.pick(['lines', 'dots']) : 'dots';
-  const orientation = difficulty === 1 ? 'row' : rng.pick(['row', 'col']);
+  const orientation = fam.framing === 'contains' ? 'col' : difficulty === 1 ? 'row' : rng.pick(['row', 'col']);
   const sizes = { 1: [2, 3], 2: [2, 4], 3: [3, 5], 4: [4, 6], 5: [5, 7], 6: [5, 7] }[difficulty];
   const elements = SET_PALETTES[palette].elements;
   const grid = [[null, null, null], [null, null, null], [null, null, null]];
@@ -528,14 +529,14 @@ function buildSetPuzzle(family, fam, difficulty, rng) {
   if (!options) return null;
   return finish({
     kind: 'set',
-    setRule: { op, orientation: colOp ? 'row' : orientation, palette, opLabel: OP_TEXT[op].name, colOp },
+    setRule: { op, orientation: colOp ? 'row' : orientation, palette, opLabel: fam.framing === 'contains' ? 'contains' : OP_TEXT[op].name, colOp, framing: fam.framing || null },
     rules: [],
     cells,
     options: options.cells,
     correctIndex: options.correctIndex,
     distractors: options.distractors,
-    explanation: explainSetPuzzle(op, colOp ? 'row' : orientation, palette, known, answer, colOp),
-    hints: setHints(op, colOp ? 'row' : orientation, colOp),
+    explanation: explainSetPuzzle(op, colOp ? 'row' : orientation, palette, known, answer, colOp, fam.framing),
+    hints: setHints(op, colOp ? 'row' : orientation, colOp, fam.framing),
     verification: { set: { predictions: preds.map((p) => ({ members: p.members, hypotheses: p.names })) } },
     features: { ruleCount: colOp ? 2 : 1, rules: colOp ? [`set:${op}:row`, `set:${colOp}:col`] : [`set:${op}:${orientation}`], palette, paletteSize: elements.length, maxSetSize: sizes[1], orientation: colOp ? 'row' : orientation, twoWay: !!colOp },
   });

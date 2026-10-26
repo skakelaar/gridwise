@@ -704,7 +704,16 @@ function showResults(parts) {
     return mount(ui.renderResults({ tab, body: ui.renderReportsList({ challenges: storage.loadChallengeHistory(), mocks: storage.loadMockHistory() }) }), { title: 'Results – reports' });
   }
   const attempts = storage.loadAttempts();
-  mount(ui.renderResults({ tab: 'progress', body: ui.renderProgress({ overall: summarise(attempts), groups: byGroup(attempts), difficulties: byDifficulty(attempts), embedded: true }) }), { title: 'Results – progress' });
+  const groups = byGroup(attempts);
+  const ranked = groups.filter((g) => g.attempted >= 3).sort((a, b) => (a.accuracy ?? 1) - (b.accuracy ?? 1));
+  const weakest = ranked[0] || null;
+  const onDrill = (groupId) => {
+    storage.saveSettings({ practiceFamily: `group:${groupId}`, practiceDifficulty: 'mixed', practiceClock: '45', practiceHints: false });
+    practiceSessions.guided = null; practiceSessions.untimed = null;
+    navigate('#/practice');
+    ui.announce('Practice set to your weak spot with a 45-second clock.');
+  };
+  mount(ui.renderResults({ tab: 'progress', body: ui.renderProgress({ overall: summarise(attempts), groups, difficulties: byDifficulty(attempts), weakest, embedded: true }, { onDrill }) }), { title: 'Results – progress' });
 }
 
 function showSettings() {

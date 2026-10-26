@@ -79,6 +79,11 @@ export const INTRO_STEPS = [
       + 'should return to solid, and the square should move one more step down.</p>',
     example: { family: 'combination', difficulty: 1, seed: 'intro17' },
   },
+  {
+    title: 'When rows and columns fail, read the whole matrix',
+    body: '<p>Some puzzles have no row rule and no column rule at all. Then ask: is there a <strong>path</strong> through the nine cells (a snake, a spiral) along which something counts up or down? Is there a <strong>tally</strong> over the whole matrix (three of each kind)? Is there a <strong>fixed set</strong> that every cell contains, with the rest being noise? Is the bottom row the top row <strong>mirrored</strong>?</p><ul><li>Count first, then look for the order that makes the counts steady.</li><li>Ignore positions inside a cell unless they clearly matter.</li><li>Only decide “no rule” after trying rows, columns, paths and tallies.</li></ul>',
+    example: { family: 'path', difficulty: 2, seed: 'intro4' },
+  },
 ];
 
 export const PRACTICE_MODES = {

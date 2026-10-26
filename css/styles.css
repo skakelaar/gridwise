@@ -780,3 +780,4 @@ sup { font-size: 0.7em; line-height: 0; }
   .stat-tiles { grid-template-columns: 1fr 1fr; }
   .site-nav a { padding: 0.5rem 0.5rem; }
 }
+.cell-actions { white-space: nowrap; display: flex; gap: 0.5rem; align-items: center; justify-content: flex-end; }

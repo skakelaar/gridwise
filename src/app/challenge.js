@@ -33,7 +33,7 @@ function shuffle(arr, random) {
 /** Twelve slots: every rule group twice, in a shuffled order, each with its own seed. The level is decided as play proceeds. */
 export function createChallenge({ format = 'matrix', now = Date.now(), random = Math.random } = {}) {
   const fmt = CHALLENGE_FORMATS[format] || CHALLENGE_FORMATS.matrix;
-  const groups = Object.keys(GROUPS);
+  const groups = [...Object.keys(GROUPS), 'global']; // whole-matrix patterns count double
   let slots;
   const cycle = (list, n) => { const out = []; const order = shuffle(list, random); for (let i = 0; i < n; i++) out.push(order[i % order.length]); return out; };
   if (fmt.id === 'mixed') {

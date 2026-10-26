@@ -11,7 +11,7 @@ test('challenge has twelve slots covering every rule group and starts at level 3
   const counts = {};
   for (const i of c.items) counts[i.group] = (counts[i.group] || 0) + 1;
   assert.equal(Object.keys(counts).length, 7, 'every matrix group appears');
-  assert.ok(Object.values(counts).every((n) => n >= 1 && n <= 2));
+  assert.ok(Object.values(counts).every((n) => n >= 1 && n <= 3));
   assert.equal(c.items[0].difficulty, 3);
   assert.equal(c.endsAt - c.startedAt, 12 * 60 * 1000);
   assert.equal(puzzleDeadline(c), 1000 + 60 * 1000);

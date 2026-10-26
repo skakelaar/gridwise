@@ -227,7 +227,7 @@ export function figureHints(rules, domains, family) {
   return hints;
 }
 
-export function explainSetPuzzle(op, orientation, palette, known, answer, colOp = null) {
+export function explainSetPuzzle(op, orientation, palette, known, answer, colOp = null, framing = null) {
   const pal = SET_PALETTES[palette];
   const names = (m) => (m.length ? listNames(m.map((x) => pal.names[x])) : 'nothing');
   const o = OP_TEXT[op];
@@ -236,6 +236,16 @@ export function explainSetPuzzle(op, orientation, palette, known, answer, colOp 
   const first = orientation === 'row' ? known[2][0] : known[0][2];
   const second = orientation === 'row' ? known[2][1] : known[1][2];
   const ruleText = `In each ${along}, the third cell ${o.verb} the first two: ${o.how}.` + (o.note ? ` ${o.note}` : '');
+  if (framing === 'contains') {
+    const top = known[0][2], middle = known[1][2];
+    return {
+      summary: 'Read each column from the top: the top cell contains everything that appears in the two cells below it.',
+      rows: ['The rows carry no rule of their own; compare the cells of a column instead.'],
+      columns: ['In each column, the top cell is the two lower cells combined, and those two never share an element. So the bottom cell is whatever the top cell has that the middle cell lacks.'],
+      missing: [`Column 3: the top cell has ${names(top)}; the middle cell has ${names(middle)}.`, `What remains for the bottom cell is ${names(answer.members)}.`],
+      unchanged: '',
+    };
+  }
   const co = colOp ? OP_TEXT[colOp] : null;
   const noRule = co
     ? `The columns follow a second operation of their own: in each column, the third cell ${co.verb} the first two (${co.how}). Both operations give the same missing cell.`
@@ -252,7 +262,8 @@ export function explainSetPuzzle(op, orientation, palette, known, answer, colOp 
   };
 }
 
-export function setHints(op, orientation, colOp = null) {
+export function setHints(op, orientation, colOp = null, framing = null) {
+  if (framing === 'contains') return ['Compare the top cell of column 1 with the two cells under it.', 'The top cell holds every element of the two lower cells, which never overlap.', 'So the missing bottom cell is the top cell minus the middle cell.'];
   const along = orientation === 'row' ? 'row' : 'column';
   const extra = colOp ? [`The columns follow a second operation (${OP_TEXT[colOp].name}); either direction gives the answer, and they agree.`] : [];
   return [...extra,
