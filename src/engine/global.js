@@ -277,6 +277,15 @@ function multisetCounts(items) {
   return m;
 }
 
+// A unique modal option leaks the answer without requiring the matrix. Count each
+// shape/fill type separately, including absence; all options must remain distinct.
+function answerWinsComponentVote(answer, distractors) {
+  const counts = [answer, ...distractors.map(d => d.cell)].map(c => multisetCounts(c.items));
+  const keys = [...new Set(counts.flatMap(m => [...m.keys()]))];
+  const scores = counts.map(m => keys.reduce((sum,k) => sum + counts.filter(n => (n.get(k)||0) === (m.get(k)||0)).length, 0));
+  return scores.slice(1).every(s => s < scores[0]);
+}
+
 export function buildInvariant(difficulty, rng) {
   const coreTypes = difficulty <= 2 ? 2 : difficulty <= 4 ? 3 : 4;
   const noiseMax = difficulty <= 1 ? 1 : difficulty <= 3 ? 2 : 3;
@@ -312,7 +321,7 @@ export function buildInvariant(difficulty, rng) {
   wrong.push({ items: [...baseNoise, ...baseNoise.length ? [] : [{ shape: noisePool[0], fill: 'none' }]], code: 'noise-only', text: 'keeps only the stray shapes and drops the fixed set' });
   const cands = wrong.filter((w) => w.items.length >= 1 && w.items.length <= 8 && violates(w.items)).map((w) => ({ cell: multiCell(w.items, rng), code: w.code, text: w.text }));
   const ds = fiveDistinct(cands, (d) => globalCellKey(d.cell), rng, globalCellKey(answer));
-  if (!ds) return null;
+  if (!ds || answerWinsComponentVote(answer, ds)) return null;
   const coreText = core.map((c) => `${NUM[c.n]} ${c.fill === 'solid' ? 'solid' : 'hollow'} ${SHAPE_LABEL[c.shape]}${c.n > 1 ? 's' : ''}`);
   return {
     kind: 'global', cells, ...assemble(answer, ds, rng),
@@ -403,7 +412,7 @@ export function buildComposition(difficulty, rng) {
   wrong.push({ items: chain.slice(0, Math.min(5, k + 2)), code: 'count-plus-two', text: 'has two shapes too many' });
   const cands = wrong.filter((w) => w.items.length >= 1).map((w) => ({ cell: multiCell(w.items, rng), code: w.code, text: w.text }));
   const ds = fiveDistinct(cands, (d) => globalCellKey(d.cell), rng, globalCellKey(answer));
-  if (!ds) return null;
+  if (!ds || answerWinsComponentVote(answer, ds)) return null;
   const chainText = chain.map((c, i) => `${i + 1}: + ${SHAPE_LABEL[c.shape]}`).join(', ');
   return {
     kind: 'global', cells, ...assemble(answer, ds, rng),

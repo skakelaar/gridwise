@@ -532,6 +532,10 @@ function buildSetPuzzle(family, fam, difficulty, rng) {
   const options = buildSetOptions(op, colOp ? 'row' : orientation, palette, grid, cells, rng, difficulty);
   if (!options) return null;
   if (options.cells.some((c, i) => i !== options.correctIndex && reverseSetReadings(palette, known, c.members).length)) return null;
+  // Neither presence nor absence of one element may single out the answer among
+  // five options sharing the opposite value. Reverse-reading filters can otherwise
+  // leave an unbalanced cluster even when the original recipe was balanced.
+  if (elements.some(e => options.cells.filter(c => c.members.includes(e) === answer.members.includes(e)).length === 1)) return null;
   return finish({
     kind: 'set',
     setRule: { op, orientation: colOp ? 'row' : orientation, palette, opLabel: fam.framing === 'contains' ? 'contains' : OP_TEXT[op].name, colOp, framing: fam.framing || null },

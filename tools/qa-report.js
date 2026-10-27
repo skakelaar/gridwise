@@ -1,6 +1,6 @@
 // Independent QA sweep: node tools/qa-report.js [seeds=300] [out=review/qa-report.md]
 //
-// Runs the rule-blind solver (src/engine/qa-solver.js) over FAMILY_IDS × difficulty 1–3 × N seeds (`qa-${i}`)
+// Runs the rule-blind solver (src/engine/qa-solver.js) over FAMILY_IDS × difficulty 1–6 × N seeds (`qa-${i}`)
 // and writes a Markdown report: agreement table, every disagreement / ambiguous puzzle with the solver's
 // reasons, plus structural checks (identical option SVGs, explanation text vs cell values, distractors that
 // copy matrix cells, misconception-code distribution, multi-shape cells with a position, answer-index bias,
@@ -158,9 +158,13 @@ export function majorityPick(p) {
     return winners.length === 1 ? winners[0] : -1;
   }
   if (p.options[0].kind !== 'figure') {
-    // whole-matrix cells: majority over the canonical cell key
-    const keys = p.options.map(cellKey);
-    const score = keys.map((k) => keys.filter((x) => x === k).length);
+    // Compare observable counts, not whole-cell identity (all six keys are distinct by construction).
+    const sets = p.options.map(o => o.items?.map(x => `${x.shape}/${x.fill}`) || []);
+    const keys = [...new Set(sets.flat())];
+    const obs = p.options.map((o,i) => o.items
+      ? Object.fromEntries(keys.map(k => [k,sets[i].filter(x => x === k).length]))
+      : {count:o.sections ?? o.count});
+    const score = obs.map(o => Object.keys(o).reduce((sum,k) => sum + obs.filter(x => x[k] === o[k]).length,0));
     const best = Math.max(...score);
     const winners = score.map((s, i) => (s === best ? i : -1)).filter((i) => i >= 0);
     return winners.length === 1 ? winners[0] : -1;
@@ -267,37 +271,9 @@ const elapsed = Date.now() - t0;
 // ---------------------------------------------------------------- plausibility review (hand-written)
 
 const PLAUSIBILITY = `
-Twelve puzzles were read as a person would, from \`description.cells\` / \`description.options\` (seeds qa-0 … qa-11,
-one family each). For each: the intended reading, any other simple reading, and whether it changes the answer.
-
-| Puzzle | Intended reading | Other simple readings | Changes answer? |
-|---|---|---|---|
-| rotation-1-qa-0 | L shape turns 90° anticlockwise along each row | none (columns show no regularity) | no |
-| reflection-2-qa-1 | row alternates upright / mirrored / upright; vertical position is one-of-each per row and column | "each column keeps its orientation" (same prediction) | no |
-| number-2-qa-2 | one-of-each counts {1,3,5}; rotation +90° along rows | none; but 5 small keys drawn at ~25% scale make the rotation of each key hard to read (legibility, not logic) | no |
-| size-1-qa-3 | every row the same size, shrinking one step per row | "row 3 is all small" (same prediction) | no |
-| position-3-qa-4 | star/plus/star down the columns; x and y each one-of-each | treating location as a single attribute (bottom-right, middle-left, top-centre form a Latin square) gives the same answer | no |
-| fill-2-qa-5 | checkerboard fill; vertical position one-of-each | none | no |
-| alternation-3-qa-6 | triangle/square/triangle down columns; size checkerboard; count +1 down each column | count reads as "x y x" along rows (1,2,1 / 2,3,2 / 3,4,?) — predicts 3, same answer by coincidence of the starts 1,2,1 | no |
-| cyclic-2-qa-7 | size and count both one-of-each | none | no |
-| subtraction-2-qa-8 | third = first minus second | "exclusive-or" fits every complete row as well (second ⊂ first always), same prediction; the explanation presents subtraction as *the* rule although xor is equally valid on this evidence | no |
-| xor-3-qa-9 | column-wise exclusive-or on 3–4 dots per cell | none, but 4-dot xor on a 9-dot grid is visually demanding at difficulty 3 | no |
-| combination-3-qa-10 | shape one-of-each; fill solid/striped/solid down columns; figure moves right along each row | none | no |
-| intersection-2-qa-11 | column-wise intersection | none | no |
-
-Observations from the hand review that are not answer ambiguities:
-
-* **Subtraction and exclusive-or are indistinguishable on the evidence** (subtraction puzzles always have the second cell
-  inside the first, so A−B = A xor B). The answer is unique, but the explanation and the final hint name
-  "subtraction" as the operation; a learner who reads it as "keep the differences" is also right. Proposed wording:
-  acknowledge the equivalent reading in the subtraction explanation.
-* **Addition vs union likewise** (disjoint inputs): same answer; already treated as "identical readings" in the
-  distractor builder, but not in the explanation text.
-* **Legibility of small multi-shape oriented cells**: count 4–5 × size small × chiral shape renders each shape at
-  roughly a quarter of the cell; rotation/mirroring of a key or flag at that scale is close to unreadable in a 70 px
-  cell. Not a logic defect; worth a minimum size for oriented shapes when count ≥ 4.
-* Alternation puzzles whose count rule has starts like 1,2,1 read as alternation along the other axis
-  (alternation-3-qa-6). Harmless here because both readings agree, but it shows how thin the margin is.
+The earlier hard-coded hand-review table was removed because generator changes altered the puzzles behind its seeds.
+See [adversarial-review.md](adversarial-review.md) for reproduced findings, scope and residual risks from the current audit.
+This generated report is a finite pattern-library check, not evidence that every human reading has been excluded.
 `;
 
 // ---------------------------------------------------------------- report
@@ -305,9 +281,9 @@ Observations from the hand review that are not answer ambiguities:
 const md = [];
 md.push(`# Independent QA report — Gridwise`);
 md.push(``);
-md.push(`Generated by \`node tools/qa-report.js ${N}\` on ${new Date().toISOString().slice(0, 10)}. ${total} puzzles (${FAMILY_IDS.length} families × 3 difficulties × ${N} seeds \`qa-0 … qa-${N - 1}\`), ${elapsed} ms.`);
+md.push(`Generated by \`node tools/qa-report.js ${N}\` on ${new Date().toISOString().slice(0, 10)}. ${total} puzzles (${FAMILY_IDS.length} families × 6 difficulties × ${N} seeds \`qa-0 … qa-${N - 1}\`), ${elapsed} ms.`);
 md.push(``);
-md.push(`The solver in \`src/engine/qa-solver.js\` sees only the eight visible cells and the six options. It plugs each option into the gap and tests the completed 3×3 grid, attribute by attribute, against a library of pattern predicates. **Strong** readings are regularities a person would accept as *the* rule (constant rows/columns, the same step in every row or column, one-of-each per row/column, alternation, checkerboard, row/column sums or differences of counts, row/column set operations). **Weak** readings are copies of a row/column, per-line steps, reverse set readings, |a−b| and so on. An option is *fully consistent* when every attribute admits a strong reading; a puzzle is **ambiguous** when more than one option is fully consistent. Multi-shape layouts are read as centred (their centroid), orientation through \`canonicalOrientation\`.`);
+md.push(`The solver in \`src/engine/qa-solver.js\` sees only the eight visible cells and the six options. It plugs each option into the gap and tests the completed 3×3 grid, attribute by attribute, against a library of pattern predicates. **Strong** readings are regularities a person would accept as *the* rule (constant rows/columns, the same step in every row or column, one-of-each per row/column, alternation, checkerboard, row/column sums or differences of counts, row/column set operations including reverse readings, and angle addition). **Weak** readings are copies of a row/column, per-line steps, |a−b| and so on. An option is *fully consistent* when every attribute admits a strong reading; a puzzle is **ambiguous** when more than one option is fully consistent. Multi-shape layouts are read as centred (their centroid), orientation through \`canonicalOrientation\`.`);
 md.push(``);
 md.push(`## 1. Agreement per family × difficulty`);
 md.push(``);
@@ -317,7 +293,7 @@ for (const r of table) md.push(`| ${r.family} | ${r.difficulty} | ${r.agree}/${N
 const totAgree = table.reduce((s, r) => s + r.agree, 0);
 const totAmb = table.reduce((s, r) => s + r.amb, 0);
 md.push(``);
-md.push(`Overall: ${totAgree}/${total} agreement (${pct(totAgree, total)}), ${totAmb} ambiguous puzzles (${pct(totAmb, total)}). Where the solver disagrees it is always because a second option is fully consistent and the tie-break picked the other one; there is no case where the intended answer fails to be fully consistent.`);
+md.push(`Overall: ${totAgree}/${total} agreement (${pct(totAgree, total)}), ${totAmb} ambiguous puzzles (${pct(totAmb, total)}). Intended answers lacking a strong reading: ${table.reduce((sum,r)=>sum+r.notStrong,0)}. See individual rows and examples for any failures.`);
 md.push(``);
 md.push(`Ambiguity by class: ${Object.entries(ambiguityClasses).map(([k, v]) => `**${k}** — ${v}`).join('; ') || 'none'}.`);
 md.push(``);
@@ -345,13 +321,12 @@ for (const a of ambiguous) md.push(`| ${a.id} | ${a.rules} | ${a.intended} | ${a
 md.push(``);
 md.push(`## 4. Weak alternatives (information only)`);
 md.push(``);
-md.push(`A weak alternative is a distractor that is consistent with every attribute only when a weak reading is allowed. These are not failures; they show which distractors a learner could rationalise.`);
+md.push(`A weak alternative is a distractor that is consistent with every attribute only when a weak reading is allowed. These require judgement: the strong/weak boundary is a modelling choice, and some previously weak readings proved legitimate in adversarial review.`);
 md.push(``);
-md.push(`| Family | Puzzles with a weak alternative (of ${3 * N}) |`);
+md.push(`| Family | Puzzles with a weak alternative (of ${6 * N}) |`);
 md.push(`|---|---|`);
 for (const f of FAMILY_IDS) md.push(`| ${f} | ${weakAlternatives.get(f) || 0} |`);
 md.push(``);
-md.push(`* Every addition and subtraction puzzle has one: with disjoint (addition) or nested (subtraction) inputs, the reverse readings "first = third − second" / "first = second ∪ third" accept the *missing-one* / *extra-one* distractors. Expected and harmless, but it is why the distractor text "does not follow from the operation" is slightly too strong for those options.`);
 md.push(`* Figure examples (first ${Math.min(weakExamples.length, 12)}):`);
 for (const w of weakExamples.slice(0, 12)) md.push(`  * ${w.id}: ${esc(w.lines.map((l) => l.replace(/^weakly consistent alternative: /, '')).join('; '))}`);
 md.push(``);
@@ -363,7 +338,7 @@ md.push(svgDupes.length ? svgDupes.map((s) => `* ${s}`).join('\n') : `None in ${
 md.push(``);
 md.push(`### (b) Explanation sentences vs cell values`);
 md.push(``);
-md.push(`For every active rule the "missing" sentence must name the answer's value of that attribute and must not name a value of that attribute that is absent from the cells it refers to (row 3 / column 3 / both for one-of-each). The final sentence must contain the answer's description; the "unchanged" sentence must name every constant shape/fill/size/count with the answer's value; set explanations must list exactly the elements of the two input cells and of the answer; no hint may contain the answer's description. Wording in \`explain.js\`/\`text.js\` is being edited concurrently, so matches are by value name (long or short form).`);
+md.push(`For every active rule the "missing" sentence must name the answer's value of that attribute and must not name a value of that attribute that is absent from the cells it refers to (row 3 / column 3 / both for one-of-each). The final sentence must contain the answer's description; the "unchanged" sentence must name every constant shape/fill/size/count with the answer's value; set explanations must list exactly the elements of the two input cells and of the answer; no hint may contain the answer's description. Matching uses value names (long or short form), not semantic understanding of all prose.`);
 md.push(``);
 md.push(textIssues.length ? `${textIssues.length} issue(s):\n` + [...new Set(textIssues)].slice(0, 60).map((s) => `* ${esc(s)}`).join('\n') : `No issues in ${total} puzzles.`);
 md.push(``);
@@ -387,7 +362,7 @@ md.push(`Observations:`);
 md.push(``);
 md.push(`* Set families now draw up to three "wrong operation" distractors, a neighbouring-cell copy and near misses in two balanced clusters; a wrong-operation result that coincides with a copied cell is labelled as the copy.`);
 md.push(`* "changed-constant" distractors (a constant attribute altered) only appear as tie-breakers that make two misconception cells distinct; the altered value is seed-random.`);
-md.push(`* Two-misconception distractors (codes with "+") are built in deliberately: the distractor set is arranged so the answer is never the per-attribute majority of the options (see 5f).`);
+md.push(`* Two-misconception distractors (codes with "+") are built in deliberately: the distractor set is arranged to reduce option-only shortcuts (see 5f for the measured rate).`);
 md.push(``);
 md.push(`### (e) Multi-shape cells with a non-centre position`);
 md.push(``);
@@ -397,13 +372,13 @@ md.push(`### (f) Answer position and test-wiseness`);
 md.push(``);
 md.push(`Correct option index distribution over ${total} puzzles: ${indexDist.map((n, i) => `${i}: ${n} (${pct(n, total)})`).join(', ')}.`);
 md.push(``);
-md.push(`"Majority attribute" heuristic (choose the option whose attribute values agree with the most other options; set puzzles: per-element majority; ties count as a miss) picks the intended answer:`);
+md.push(`"Majority attribute" heuristic (choose the option whose attribute values agree with the most other options; set puzzles: per-element majority; multi-shape cells: per-type counts; ties count as an abstention) picks the intended answer:`);
 md.push(``);
 md.push(`| Family | Hit rate |`);
 md.push(`|---|---|`);
 for (const f of FAMILY_IDS) md.push(`| ${f} | ${pct(majority[f].hit, majority[f].n)} |`);
 md.push(``);
-md.push(`Chance is 16.7%. A hit rate well above chance means the option set alone reveals the answer; the generator arranges distractors in balanced clusters so the answer is never the per-attribute (or per-element) majority. Highest hit rate in this sweep: ${Math.max(...Object.values(majority).map((v) => v.n ? (100 * v.hit) / v.n : 0)).toFixed(1)}%.`);
+md.push(`Uniform random choice scores 16.7%, whereas this probe abstains on ties, so the percentages are not directly comparable. A high hit rate is evidence of an option-only shortcut. A low rate establishes only that this particular heuristic rarely wins. Highest hit rate in this sweep: ${Math.max(...Object.values(majority).map((v) => v.n ? (100 * v.hit) / v.n : 0)).toFixed(1)}%.`);
 md.push(``);
 md.push(`## 6. Plausibility review (hand-read puzzles)`);
 md.push(PLAUSIBILITY);
