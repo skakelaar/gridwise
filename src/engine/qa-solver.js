@@ -143,8 +143,8 @@ export function figurePatterns(grid, meta) {
     if (C.every((l) => l.every((v) => v !== null) && l[0] === l[1] + l[2])) add('colSumFirst', false);
   }
   if (meta.kind === 'cyclic') {
-    if (linesArith(R, (a, b) => (a + b) % meta.n)) add('rowSumMod', false);
-    if (linesArith(C, (a, b) => (a + b) % meta.n)) add('colSumMod', false);
+    if (linesArith(R, (a, b) => (a + b) % meta.n)) add('rowSumMod', true);
+    if (linesArith(C, (a, b) => (a + b) % meta.n)) add('colSumMod', true);
   }
 
   const distinct = new Set(known);

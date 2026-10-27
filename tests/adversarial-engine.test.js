@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { generateAny, generatePuzzle } from '../src/engine/index.js';
 import { predictAttribute } from '../src/engine/solver.js';
 import { solveIndependently } from '../src/engine/qa-solver.js';
-import { SERIES_RULES } from '../src/engine/items/series.js';
 
 test('split audit-18: row endpoints supply a second lawful answer', () => {
   const cells = [4,3,4,2,3,2,3,2,4].map(sections => ({kind:'split', sections, variant:'unused'}));
@@ -15,6 +14,17 @@ test('split audit-18: row endpoints supply a second lawful answer', () => {
     const p=generatePuzzle({family:'split',difficulty,seed:`audit-${i}`});
     assert.equal(solveIndependently(p).ambiguous,false,p.id);
   }
+});
+
+test('rotation audit-185: column angle addition gives a second fully consistent option', async () => {
+  const {default:p}=await import('./fixtures/rotation-1-audit-185.json',{with:{type:'json'}});
+  assert.equal(p.cells[8].rot,2);
+  assert.equal(p.options[0].rot,1);
+  assert.equal(solveIndependently(p).ambiguous,true);
+  const predictions=predictAttribute({kind:'cyclic',values:[0,1,2,3,4,5,6,7],steps:[1,-1]},[[1,1,0],[2,2,1],[3,3,null]]);
+  assert.ok(predictions.has(1)); assert.ok(predictions.has(2));
+  const repaired=generatePuzzle({family:'rotation',difficulty:1,seed:'audit-185'});
+  assert.equal(solveIndependently(repaired).ambiguous,false);
 });
 
 

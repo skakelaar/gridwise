@@ -26,6 +26,13 @@ export function predictAttribute(domain, known) {
   const cells = [];
   for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) if (!(r === 2 && c === 2)) cells.push([r, c, known[r][c]]);
 
+  // Angles compose by addition around a full turn, measured from upright.
+  if (cyc) {
+    const sum = (a, b) => (a + b) % n;
+    if ([0, 1].every(r => sum(known[r][0], known[r][1]) === known[r][2])) add('rowSumMod', sum(known[2][0], known[2][1]));
+    if ([0, 1].every(c => sum(known[0][c], known[1][c]) === known[2][c])) add('colSumMod', sum(known[0][2], known[1][2]));
+  }
+
   // const
   if (cells.every(([, , v]) => eq(v, cells[0][2]))) add('const', cells[0][2]);
 

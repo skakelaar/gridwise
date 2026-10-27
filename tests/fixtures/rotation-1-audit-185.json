@@ -1,0 +1,884 @@
+{
+  "kind": "figure",
+  "rules": [
+    {
+      "attr": "shape",
+      "type": "const",
+      "params": {
+        "value": 1
+      },
+      "values": [
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ]
+      ],
+      "label": "shape"
+    },
+    {
+      "attr": "fill",
+      "type": "const",
+      "params": {
+        "value": 1
+      },
+      "values": [
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ]
+      ],
+      "label": "fill"
+    },
+    {
+      "attr": "size",
+      "type": "const",
+      "params": {
+        "value": 1
+      },
+      "values": [
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ]
+      ],
+      "label": "size"
+    },
+    {
+      "attr": "count",
+      "type": "const",
+      "params": {
+        "value": 1
+      },
+      "values": [
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ]
+      ],
+      "label": "number of shapes"
+    },
+    {
+      "attr": "rot",
+      "type": "colProg",
+      "params": {
+        "step": 1,
+        "starts": [
+          1,
+          1,
+          0
+        ]
+      },
+      "values": [
+        [
+          1,
+          1,
+          0
+        ],
+        [
+          2,
+          2,
+          1
+        ],
+        [
+          3,
+          3,
+          2
+        ]
+      ],
+      "label": "rotation"
+    },
+    {
+      "attr": "flip",
+      "type": "const",
+      "params": {
+        "value": 0
+      },
+      "values": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "label": "reflection"
+    },
+    {
+      "attr": "x",
+      "type": "const",
+      "params": {
+        "value": 1
+      },
+      "values": [
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ]
+      ],
+      "label": "horizontal position"
+    },
+    {
+      "attr": "y",
+      "type": "const",
+      "params": {
+        "value": 1
+      },
+      "values": [
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ]
+      ],
+      "label": "vertical position"
+    },
+    {
+      "attr": "inner",
+      "type": "const",
+      "params": {
+        "value": 0
+      },
+      "values": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "label": "inner shape"
+    },
+    {
+      "attr": "innerFill",
+      "type": "const",
+      "params": {
+        "value": 0
+      },
+      "values": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "label": "inner fill"
+    }
+  ],
+  "domains": {
+    "shape": {
+      "kind": "categorical",
+      "values": [
+        "flag",
+        "ell",
+        "key"
+      ],
+      "label": "shape"
+    },
+    "inner": {
+      "kind": "categorical",
+      "values": [
+        "none",
+        "star",
+        "diamond",
+        "square"
+      ],
+      "label": "inner shape"
+    },
+    "innerFill": {
+      "kind": "categorical",
+      "values": [
+        "none",
+        "solid",
+        "hatched"
+      ],
+      "label": "inner fill"
+    },
+    "fill": {
+      "kind": "categorical",
+      "values": [
+        "none",
+        "solid",
+        "hatched"
+      ],
+      "label": "fill"
+    },
+    "size": {
+      "kind": "ordered",
+      "values": [
+        "small",
+        "medium",
+        "large"
+      ],
+      "label": "size",
+      "steps": [
+        1,
+        -1
+      ]
+    },
+    "count": {
+      "kind": "ordered",
+      "values": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "label": "number of shapes",
+      "steps": [
+        1,
+        -1,
+        2,
+        -2
+      ],
+      "arith": true
+    },
+    "rot": {
+      "kind": "cyclic",
+      "values": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "label": "rotation",
+      "steps": [
+        1,
+        -1,
+        2,
+        -2,
+        3,
+        -3
+      ]
+    },
+    "flip": {
+      "kind": "categorical",
+      "values": [
+        0,
+        1
+      ],
+      "label": "reflection"
+    },
+    "x": {
+      "kind": "ordered",
+      "values": [
+        0,
+        1,
+        2
+      ],
+      "label": "horizontal position",
+      "steps": [
+        1,
+        -1
+      ]
+    },
+    "y": {
+      "kind": "ordered",
+      "values": [
+        0,
+        1,
+        2
+      ],
+      "label": "vertical position",
+      "steps": [
+        1,
+        -1
+      ]
+    }
+  },
+  "cells": [
+    {
+      "kind": "figure",
+      "shape": "ell",
+      "fill": "solid",
+      "size": "medium",
+      "count": 2,
+      "rot": 1,
+      "flip": 0,
+      "x": 1,
+      "y": 1,
+      "inner": "none",
+      "innerFill": "none"
+    },
+    {
+      "kind": "figure",
+      "shape": "ell",
+      "fill": "solid",
+      "size": "medium",
+      "count": 2,
+      "rot": 1,
+      "flip": 0,
+      "x": 1,
+      "y": 1,
+      "inner": "none",
+      "innerFill": "none"
+    },
+    {
+      "kind": "figure",
+      "shape": "ell",
+      "fill": "solid",
+      "size": "medium",
+      "count": 2,
+      "rot": 0,
+      "flip": 0,
+      "x": 1,
+      "y": 1,
+      "inner": "none",
+      "innerFill": "none"
+    },
+    {
+      "kind": "figure",
+      "shape": "ell",
+      "fill": "solid",
+      "size": "medium",
+      "count": 2,
+      "rot": 2,
+      "flip": 0,
+      "x": 1,
+      "y": 1,
+      "inner": "none",
+      "innerFill": "none"
+    },
+    {
+      "kind": "figure",
+      "shape": "ell",
+      "fill": "solid",
+      "size": "medium",
+      "count": 2,
+      "rot": 2,
+      "flip": 0,
+      "x": 1,
+      "y": 1,
+      "inner": "none",
+      "innerFill": "none"
+    },
+    {
+      "kind": "figure",
+      "shape": "ell",
+      "fill": "solid",
+      "size": "medium",
+      "count": 2,
+      "rot": 1,
+      "flip": 0,
+      "x": 1,
+      "y": 1,
+      "inner": "none",
+      "innerFill": "none"
+    },
+    {
+      "kind": "figure",
+      "shape": "ell",
+      "fill": "solid",
+      "size": "medium",
+      "count": 2,
+      "rot": 3,
+      "flip": 0,
+      "x": 1,
+      "y": 1,
+      "inner": "none",
+      "innerFill": "none"
+    },
+    {
+      "kind": "figure",
+      "shape": "ell",
+      "fill": "solid",
+      "size": "medium",
+      "count": 2,
+      "rot": 3,
+      "flip": 0,
+      "x": 1,
+      "y": 1,
+      "inner": "none",
+      "innerFill": "none"
+    },
+    {
+      "kind": "figure",
+      "shape": "ell",
+      "fill": "solid",
+      "size": "medium",
+      "count": 2,
+      "rot": 2,
+      "flip": 0,
+      "x": 1,
+      "y": 1,
+      "inner": "none",
+      "innerFill": "none"
+    }
+  ],
+  "options": [
+    {
+      "kind": "figure",
+      "shape": "ell",
+      "fill": "solid",
+      "size": "medium",
+      "count": 2,
+      "rot": 1,
+      "flip": 0,
+      "x": 1,
+      "y": 1,
+      "inner": "none",
+      "innerFill": "none"
+    },
+    {
+      "kind": "figure",
+      "shape": "ell",
+      "fill": "solid",
+      "size": "medium",
+      "count": 2,
+      "rot": 2,
+      "flip": 0,
+      "x": 1,
+      "y": 1,
+      "inner": "none",
+      "innerFill": "none"
+    },
+    {
+      "kind": "figure",
+      "shape": "key",
+      "fill": "solid",
+      "size": "medium",
+      "count": 2,
+      "rot": 3,
+      "flip": 0,
+      "x": 1,
+      "y": 1,
+      "inner": "none",
+      "innerFill": "none"
+    },
+    {
+      "kind": "figure",
+      "shape": "ell",
+      "fill": "solid",
+      "size": "medium",
+      "count": 2,
+      "rot": 0,
+      "flip": 0,
+      "x": 1,
+      "y": 1,
+      "inner": "none",
+      "innerFill": "none"
+    },
+    {
+      "kind": "figure",
+      "shape": "key",
+      "fill": "solid",
+      "size": "medium",
+      "count": 2,
+      "rot": 1,
+      "flip": 0,
+      "x": 1,
+      "y": 1,
+      "inner": "none",
+      "innerFill": "none"
+    },
+    {
+      "kind": "figure",
+      "shape": "ell",
+      "fill": "solid",
+      "size": "medium",
+      "count": 2,
+      "rot": 3,
+      "flip": 0,
+      "x": 1,
+      "y": 1,
+      "inner": "none",
+      "innerFill": "none"
+    }
+  ],
+  "correctIndex": 1,
+  "distractors": [
+    {
+      "index": 0,
+      "code": "copy-above",
+      "text": "copies the cell above the gap",
+      "attrs": [
+        "rot"
+      ]
+    },
+    null,
+    {
+      "index": 2,
+      "code": "double-step+changed-constant",
+      "text": "applies the rotation change twice; and changes the shape to key, although it stays the same throughout the matrix",
+      "attrs": [
+        "rot",
+        "shape"
+      ]
+    },
+    {
+      "index": 3,
+      "code": "reverse-step",
+      "text": "applies the rotation change in the wrong direction",
+      "attrs": [
+        "rot"
+      ]
+    },
+    {
+      "index": 4,
+      "code": "repeat-above+changed-constant",
+      "text": "repeats the rotation of the cell above instead of applying the change once more; and changes the shape to key, although it stays the same throughout the matrix",
+      "attrs": [
+        "rot",
+        "shape"
+      ]
+    },
+    {
+      "index": 5,
+      "code": "copy-left",
+      "text": "copies the cell to the left of the gap",
+      "attrs": [
+        "rot"
+      ]
+    }
+  ],
+  "explanation": {
+    "summary": "One rule is at work: only the rotation changes.",
+    "rows": [
+      "Each column has its own starting rotation (45°, 45° and upright, measured clockwise); the rows add no rule of their own."
+    ],
+    "columns": [
+      "Down each column the figure turns 45° clockwise from one cell to the next."
+    ],
+    "missing": [
+      "Column 3 so far: upright, then 45°. One more 45° turn clockwise gives 90°.",
+      "Putting it together, the missing cell is 2 medium solid L shapes, rotated 90° clockwise."
+    ],
+    "unchanged": "Unchanged throughout: shape (L shape), fill (solid), size (medium) and number of shapes (2 shapes)."
+  },
+  "hints": [
+    "Focus on one thing: the rotation. Everything else stays the same.",
+    "Read down column 1, then column 2. How does the rotation change from one cell to the next?",
+    "Down each column the figure turns 45° clockwise from one cell to the next."
+  ],
+  "verification": {
+    "attributes": {
+      "shape": {
+        "predictions": [
+          {
+            "value": "ell",
+            "hypotheses": [
+              "const",
+              "rowPalindrome",
+              "colPalindrome",
+              "copyRow0",
+              "copyRow1",
+              "copyCol0",
+              "copyCol1",
+              "diagonal"
+            ]
+          }
+        ]
+      },
+      "fill": {
+        "predictions": [
+          {
+            "value": "solid",
+            "hypotheses": [
+              "const",
+              "rowPalindrome",
+              "colPalindrome",
+              "copyRow0",
+              "copyRow1",
+              "copyCol0",
+              "copyCol1",
+              "diagonal"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "predictions": [
+          {
+            "value": "medium",
+            "hypotheses": [
+              "const",
+              "rowProg(0)",
+              "colProg(0)",
+              "grid(0,0)",
+              "grid(0,0)",
+              "grid(0,0)",
+              "grid(0,0)",
+              "rowPalindrome",
+              "colPalindrome",
+              "copyRow0",
+              "copyRow1",
+              "copyCol0",
+              "copyCol1",
+              "diagonal"
+            ]
+          }
+        ]
+      },
+      "count": {
+        "predictions": [
+          {
+            "value": 2,
+            "hypotheses": [
+              "const",
+              "rowProg(0)",
+              "colProg(0)",
+              "grid(0,0)",
+              "grid(0,0)",
+              "grid(0,0)",
+              "grid(0,0)",
+              "rowPalindrome",
+              "colPalindrome",
+              "copyRow0",
+              "copyRow1",
+              "copyCol0",
+              "copyCol1",
+              "diagonal"
+            ]
+          }
+        ]
+      },
+      "rot": {
+        "predictions": [
+          {
+            "value": 2,
+            "hypotheses": [
+              "colProg(1)"
+            ]
+          }
+        ]
+      },
+      "flip": {
+        "predictions": [
+          {
+            "value": 0,
+            "hypotheses": [
+              "const",
+              "rowPalindrome",
+              "colPalindrome",
+              "copyRow0",
+              "copyRow1",
+              "copyCol0",
+              "copyCol1",
+              "diagonal"
+            ]
+          }
+        ]
+      },
+      "x": {
+        "predictions": [
+          {
+            "value": 1,
+            "hypotheses": [
+              "const",
+              "rowProg(0)",
+              "colProg(0)",
+              "grid(0,0)",
+              "grid(0,0)",
+              "grid(0,0)",
+              "grid(0,0)",
+              "rowPalindrome",
+              "colPalindrome",
+              "copyRow0",
+              "copyRow1",
+              "copyCol0",
+              "copyCol1",
+              "diagonal"
+            ]
+          }
+        ]
+      },
+      "y": {
+        "predictions": [
+          {
+            "value": 1,
+            "hypotheses": [
+              "const",
+              "rowProg(0)",
+              "colProg(0)",
+              "grid(0,0)",
+              "grid(0,0)",
+              "grid(0,0)",
+              "grid(0,0)",
+              "rowPalindrome",
+              "colPalindrome",
+              "copyRow0",
+              "copyRow1",
+              "copyCol0",
+              "copyCol1",
+              "diagonal"
+            ]
+          }
+        ]
+      },
+      "inner": {
+        "predictions": [
+          {
+            "value": "none",
+            "hypotheses": [
+              "const",
+              "rowPalindrome",
+              "colPalindrome",
+              "copyRow0",
+              "copyRow1",
+              "copyCol0",
+              "copyCol1",
+              "diagonal"
+            ]
+          }
+        ]
+      },
+      "innerFill": {
+        "predictions": [
+          {
+            "value": "none",
+            "hypotheses": [
+              "const",
+              "rowPalindrome",
+              "colPalindrome",
+              "copyRow0",
+              "copyRow1",
+              "copyCol0",
+              "copyCol1",
+              "diagonal"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "features": {
+    "ruleCount": 1,
+    "rules": [
+      "rot:colProg"
+    ],
+    "twoDirection": false,
+    "orientation": true,
+    "inner": false,
+    "arithmetic": false,
+    "coupled": false,
+    "maxStep": 1
+  },
+  "description": {
+    "matrix": "Row 1: 2 medium solid L shapes, rotated 45° clockwise; 2 medium solid L shapes, rotated 45° clockwise; 2 medium solid L shapes, upright. Row 2: 2 medium solid L shapes, rotated 90° clockwise; 2 medium solid L shapes, rotated 90° clockwise; 2 medium solid L shapes, rotated 45° clockwise. Row 3: 2 medium solid L shapes, rotated 135° clockwise; 2 medium solid L shapes, rotated 135° clockwise; missing cell.",
+    "cells": [
+      "2 medium solid L shapes, rotated 45° clockwise",
+      "2 medium solid L shapes, rotated 45° clockwise",
+      "2 medium solid L shapes, upright",
+      "2 medium solid L shapes, rotated 90° clockwise",
+      "2 medium solid L shapes, rotated 90° clockwise",
+      "2 medium solid L shapes, rotated 45° clockwise",
+      "2 medium solid L shapes, rotated 135° clockwise",
+      "2 medium solid L shapes, rotated 135° clockwise",
+      "missing cell"
+    ],
+    "options": [
+      "2 medium solid L shapes, rotated 45° clockwise",
+      "2 medium solid L shapes, rotated 90° clockwise",
+      "2 medium solid keys, rotated 135° clockwise",
+      "2 medium solid L shapes, upright",
+      "2 medium solid keys, rotated 45° clockwise",
+      "2 medium solid L shapes, rotated 135° clockwise"
+    ]
+  },
+  "id": "rotation-1-audit-185",
+  "seed": "audit-185",
+  "family": "rotation",
+  "familyLabel": "Rotation",
+  "group": "orientation",
+  "groupLabel": "Rotation and reflection",
+  "difficulty": 1,
+  "difficultyLabel": "Basic",
+  "attempt": 0
+}
