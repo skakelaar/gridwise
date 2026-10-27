@@ -13,6 +13,10 @@ const singular = (plural) => plural.replace(/ies$/, 'y').replace(/s$/, '');
 function classReasons(answer, premises, pool) {
   const parse = (x) => { const m = String(x).match(/^(All|Some|No) (.+?) are (not )?(.+)$/); return m && { q: m[1], a: m[2], neg: !!m[3], b: m[4] }; };
   const ans = answer === NONE ? null : parse(answer);
+  const parsed = premises.map(strip).map(parse).filter(Boolean);
+  const occupied = new Set(parsed.filter(p => p.q === 'Some').flatMap(p => p.neg ? [p.a] : [p.a, p.b]));
+  // Universal statements alone do not establish that their subject class exists.
+  for (let i = 0; i < parsed.length; i++) for (const p of parsed) if (p.q === 'All' && !p.neg && occupied.has(p.a)) occupied.add(p.b);
   const reasons = {};
   for (const o of pool) {
     const c = parse(o);
@@ -22,13 +26,14 @@ function classReasons(answer, premises, pool) {
         || (ans.q === 'Some' && !ans.neg && c.q === 'No')
         || (ans.q === 'No' && (c.q === 'All' || (c.q === 'Some' && !c.neg)))
         || (ans.q === 'Some' && ans.neg && c.q === 'All' && !c.neg);
-      if (contra) { reasons[o] = `contradicts what the statements force: ${answer.charAt(0).toLowerCase()}${answer.slice(1)}`; continue; }
+      const emptyCompatible = [ans.q,c.q].includes('All') && [ans.q,c.q].includes('No') && !occupied.has(c.a);
+      if (contra && !emptyCompatible) { reasons[o] = `contradicts what the statements force: ${answer.charAt(0).toLowerCase()}${answer.slice(1)}`; continue; }
     }
     const reversed = premises.map(strip).map(parse).find((pr) => pr && pr.q === 'All' && c.q === 'All' && !c.neg && pr.a === c.b && pr.b === c.a);
     if (reversed) { reasons[o] = `reverses "all ${reversed.a} are ${reversed.b}": the ${reversed.b} may include many things that are not ${reversed.a}`; continue; }
     // contradicts a premise ("no" and "some … are" are symmetric in their two terms)
     const sameTerms = (x, y) => (x.a === y.a && x.b === y.b) || ((x.q === 'No' || (x.q === 'Some' && !x.neg)) && x.a === y.b && x.b === y.a);
-    const clash = premises.map(strip).map(parse).find((pr) => pr && sameTerms(c, pr) && (
+    const clash = parsed.find((pr) => sameTerms(c, pr) && !([pr.q,c.q].includes('All') && [pr.q,c.q].includes('No') && !occupied.has(c.q === 'All' ? c.a : pr.a)) && (
       (pr.q === 'All' && !pr.neg && (c.q === 'No' || (c.q === 'Some' && c.neg && c.a === pr.a)))
       || (pr.q === 'No' && (c.q === 'All' || (c.q === 'Some' && !c.neg)))
       || (pr.q === 'Some' && !pr.neg && c.q === 'No')));
@@ -52,7 +57,7 @@ export const GROUPS_BANK = [
   { plural: 'lifeguards', singular: 'a lifeguard', has: 'can swim', hasNot: 'cannot swim', converse: 'Everyone who can swim is a lifeguard', plausible: ['Lifeguards work mainly in summer', 'Swimming is good exercise'] },
   { plural: 'members of the chess club', singular: 'a member of the chess club', has: 'wears a badge', hasNot: 'does not wear a badge', converse: 'Everyone who wears a badge is a member of the chess club', plausible: ['Chess is a game of skill', 'The chess club meets on Thursdays'] },
   { plural: 'bakers in this town', singular: 'a baker in this town', has: 'starts work before dawn', hasNot: 'does not start work before dawn', converse: 'Everyone who starts work before dawn is a baker in this town', plausible: ['Bread is best eaten fresh', 'Bakers use flour'] },
-  { plural: 'pilots', singular: 'a pilot', has: 'has a licence', hasNot: 'does not have a licence', converse: 'Everyone who has a licence is a pilot', plausible: ['Pilots can fly aeroplanes', 'A glider pilot is a pilot'] },
+  { plural: 'pilots', singular: 'a pilot', has: 'has a licence', hasNot: 'does not have a licence', converse: 'Everyone who has a licence is a pilot', plausible: ['Pilots can fly aeroplanes', 'Pilots renew their licences regularly'] },
   { plural: 'players in the orchestra', singular: 'a player in the orchestra', has: 'reads music', hasNot: 'does not read music', converse: 'Everyone who reads music is a player in the orchestra', plausible: ['An orchestra has a conductor', 'Violins are string instruments'] },
   { plural: 'residents of Oak Street', singular: 'a resident of Oak Street', has: 'has a parking permit', hasNot: 'does not have a parking permit', converse: 'Everyone who has a parking permit is a resident of Oak Street', plausible: ['Oak Street has many oak trees', 'Parking permits must be renewed yearly'] },
   { plural: 'marathon runners', singular: 'a marathon runner', has: 'trains on Sundays', hasNot: 'does not train on Sundays', converse: 'Everyone who trains on Sundays is a marathon runner', plausible: ['Marathon runners are fit', 'A marathon is 42 kilometres long'] },
@@ -121,7 +126,7 @@ function universal(difficulty, rng) {
     [plausible]: 'sounds true in general, but it is not stated in either premise',
     [isA]: given === hasB ? `affirms the consequent: ${name} ${g.has}, but that may be true of many people who are not ${g.plural}` : given === hasNotB ? `contradicts the rule: every ${bare(g.singular)} ${g.has}, and ${name} ${g.hasNot}` : `is not forced: nothing places ${name} inside the group`,
     [isNotA]: given === isA ? 'contradicts the second statement' : given === hasB ? `is not forced: ${name} may or may not be ${g.singular}` : `is not forced: lacking nothing in the premises, ${name} could still be ${g.singular}`,
-    [hasB]: given === isNotA ? `denies the antecedent: the rule is only about ${g.plural}; it says nothing about whether people outside the group ${pluralVerb(g.has)}` : given === hasNotB ? 'contradicts the second statement' : `is not forced by the statements`,
+    [hasB]: given === isNotA ? `is not forced: the rule is only about ${g.plural}; it says nothing about whether people outside the group ${pluralVerb(g.has)}` : given === hasNotB ? 'contradicts the second statement' : `is not forced by the statements`,
     [hasNotB]: given === isA ? `contradicts the rule: all ${g.plural} ${pluralVerb(g.has)}` : given === isNotA ? `denies the antecedent: the rule says nothing about people who are not ${g.plural}` : given === hasB ? 'contradicts the second statement' : 'is not forced by the statements',
   };
   return withDistractors({
@@ -283,7 +288,7 @@ function conditionalChain(difficulty, rng) {
     if (neg[o] === given) reasons[o] = 'contradicts the third statement';
     else if (v.answer !== NONE && neg[o] === v.answer) reasons[o] = `contradicts what the statements force: ${v.answer.charAt(0).toLowerCase()}${v.answer.slice(1)}`;
     else if (given === c.past && (o === a.past || o === b.past)) reasons[o] = `affirms the consequent: ${c.cond} can come about without it`;
-    else if (given === b.notPast && (o === c.past || o === c.notPast)) reasons[o] = `is not forced: with ${b.cond.replace(/^(\w+) /, '$1 not ')}, the second rule says nothing either way`;
+    else if (given === b.notPast && (o === c.past || o === c.notPast)) reasons[o] = `is not forced: with ${b.notPast.charAt(0).toLowerCase()}${b.notPast.slice(1)}, the second rule says nothing either way`;
     else if (given === c.notPast && o === a.past) reasons[o] = `would mean that ${b.cond} and then ${c.cond}, which the third statement rules out`;
   }
   return withDistractors({
@@ -375,6 +380,11 @@ export function buildLogic(difficulty, rng) {
   const kind = rng.pick(KINDS[Math.min(5, Math.max(1, difficulty))]);
   const item = BUILDERS[kind](difficulty, rng);
   if (!item) return null;
+  if (item.features.rule !== 'ordering') {
+    item.question += ' Treat the statements as rules without exceptions.';
+    if (item.prompt.includes('Some ')) item.question += ' “Some” means at least one, possibly all.';
+    if (item.prompt.startsWith('If ')) item.question += ' Each “if … then” rule is one-way: the result may also occur without its condition.';
+  }
   // Four or five options; exactly one correct by construction. Sanity: options distinct.
   if (new Set(item.options).size !== item.options.length) return null;
   return item;

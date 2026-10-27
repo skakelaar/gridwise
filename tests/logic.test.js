@@ -33,7 +33,7 @@ function parseClass(s) {
 }
 
 // Enumerate models: each class is a subset of a domain of N elements (bitmask); individuals are fixed elements.
-function classEntails(premises, conclusion, importAll) {
+function classEntails(premises, conclusion, importAll, vacuousSome = false) {
   const terms = [...new Set([...premises, conclusion].flatMap((p) => (p.kind === 'in' || p.kind === 'notIn' ? [p.cls] : [p.a, p.b])))];
   const people = [...new Set([...premises, conclusion].filter((p) => p.kind === 'in' || p.kind === 'notIn').map((p) => p.x))];
   const N = 3;
@@ -43,8 +43,8 @@ function classEntails(premises, conclusion, importAll) {
     const A = model[st.a], B = model[st.b];
     if (st.kind === 'all') return (A & ~B) === 0 && (!importAll || A !== 0);
     if (st.kind === 'no') return (A & B) === 0;
-    if (st.kind === 'some') return (A & B) !== 0;
-    if (st.kind === 'someNot') return (A & ~B) !== 0;
+    if (st.kind === 'some') return (vacuousSome && A === 0) || (A & B) !== 0;
+    if (st.kind === 'someNot') return (vacuousSome && A === 0) || (A & ~B) !== 0;
     throw new Error('bad statement');
   };
   let satisfiable = false;
@@ -101,7 +101,7 @@ function checkOrdering(item) {
   for (const l of lines) {
     let m;
     if ((m = l.match(/^(\w+) is (\w+) than (\w+) and than (\w+)\.$/))) { pairs.push([m[1], m[3], m[2]], [m[1], m[4], m[2]]); }
-    else if ((m = l.match(/^(\w+) is (\w+) than (\w+), but (\w+) than (\w+)\.$/))) { pairs.push([m[1], m[3], m[2]], [m[5], m[1], m[2] === 'taller' ? 'taller' : m[2]]); }
+    else if ((m = l.match(/^(\w+) is (\w+) than (\w+), but (\w+) than (\w+)\.$/))) { assert.equal(m[4], {taller:'shorter',older:'younger',faster:'slower',heavier:'lighter',richer:'poorer'}[m[2]], item.id); pairs.push([m[1], m[3], m[2]], [m[1], m[5], m[4]]); }
     else if ((m = l.match(/^(\w+) is (\w+) than (\w+)\.$/))) pairs.push([m[1], m[3], m[2]]);
     else throw new Error(`unparsed ordering line: ${l}`);
   }
@@ -110,6 +110,8 @@ function checkOrdering(item) {
   const beats = pairs.map(([a, b, adj]) => (LESS[adj] ? [b, a] : [a, b]));
   for (const [a, b] of beats) { names.add(a); names.add(b); }
   const people = [...names];
+  assert.equal(people.length, item.features.people, item.id);
+  for (const option of item.options) if (option !== NONE) assert.ok(names.has(option), item.id);
   const perms = (arr) => (arr.length <= 1 ? [arr] : arr.flatMap((x, i) => perms([...arr.slice(0, i), ...arr.slice(i + 1)]).map((p) => [x, ...p])));
   const consistent = perms(people).filter((p) => beats.every(([a, b]) => p.indexOf(a) < p.indexOf(b)));
   assert.ok(consistent.length > 0, `${item.id}: statements are contradictory`);
@@ -125,7 +127,7 @@ function checkOrdering(item) {
 
 const seeds = Array.from({ length: Number(process.env.SEEDS || 250) }, (_, i) => `logic-${i}`);
 
-test('every logic item: the answer is entailed and no other option is, under both readings', () => {
+test('every logic item: the answer is entailed and no other option is, under four quantified readings', () => {
   let classItems = 0, propItems = 0, orderItems = 0;
   for (const difficulty of [1, 2, 3, 4, 5, 6]) {
     for (const seed of seeds) {
@@ -144,10 +146,22 @@ test('every logic item: the answer is entailed and no other option is, under bot
       } else {
         const prem = lines.map(parseClass);
         assert.ok(prem.every(Boolean), `${item.id}: unparsed premise in ${item.prompt}`);
-        for (const importAll of [false, true]) {
-          const entailed = item.options.filter((o) => o !== NONE).filter((o) => { const c = parseClass(o); return c ? classEntails(prem, c, importAll) : false; });
-          if (answer === NONE) assert.deepEqual(entailed, [], `${item.id} (import ${importAll}): ${entailed.join(' / ')} follows but answer is NONE`);
-          else assert.deepEqual(entailed, [answer], `${item.id} (import ${importAll}): entailed ${entailed.join(' / ')} vs answer ${answer}`);
+        for (const importAll of [false, true]) for (const vacuousSome of [false, true]) {
+          const entailed = item.options.filter((o) => o !== NONE).filter((o) => { const c = parseClass(o); return c ? classEntails(prem, c, importAll, vacuousSome) : false; });
+          if (answer === NONE) assert.deepEqual(entailed, [], `${item.id} (import ${importAll}, vacuous some ${vacuousSome}): ${entailed.join(' / ')} follows but answer is NONE`);
+          else assert.deepEqual(entailed, [answer], `${item.id} (import ${importAll}, vacuous some ${vacuousSome}): entailed ${entailed.join(' / ')} vs answer ${answer}`);
+        }
+        // Reject paraphrased premises too: equivalence is checked semantically, including
+        // symmetric 'no' and 'some' statements, rather than only matching strings.
+        for (const o of item.options) {
+          const c = parseClass(o); if (!c) continue;
+          for (const p of prem) assert.ok(!(classEntails([p], c, false) && classEntails([c], p, false)), `${item.id}: restatement ${o}`);
+        }
+        for (const d of item.distractors.filter(Boolean)) {
+          const c = parseClass(item.options[d.index]);
+          if (!c || !d.text.startsWith('contradicts')) continue;
+          const opposite = {all:'someNot',someNot:'all',some:'no',no:'some',in:'notIn',notIn:'in'};
+          assert.ok(classEntails(prem, {...c,kind:opposite[c.kind]}, false), `${item.id}: unsupported contradiction note for ${item.options[d.index]}`);
         }
         classItems++;
       }
