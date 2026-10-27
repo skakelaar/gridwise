@@ -31,7 +31,8 @@ export function createCountdown({ endsAt, onTick, onEnd, announceAt = [60, 10], 
   function start() {
     stop();
     tick();
-    handle = setInterval(tick, 250);
+    // tick() already called onEnd when the deadline has passed; do not schedule a second one.
+    if (remainingSeconds() > 0) handle = setInterval(tick, 250);
     return api;
   }
 

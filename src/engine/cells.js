@@ -24,6 +24,13 @@ export function figureCell(attrs) {
   return { kind: 'figure', ...attrs };
 }
 
+/** A main figure (always one medium shape, centred) with a set of small marks attached at fixed anchors. */
+export function compositeCell(attrs) {
+  const order = SET_PALETTES.parts.elements;
+  const parts = [...new Set(attrs.parts || [])].sort((a, b) => order.indexOf(a) - order.indexOf(b));
+  return { kind: 'composite', shape: attrs.shape, fill: attrs.fill, rot: attrs.rot ?? 0, flip: attrs.flip ?? 0, parts };
+}
+
 export function setCell(palette, members) {
   const order = SET_PALETTES[palette].elements;
   const sorted = [...new Set(members)].sort((a, b) => order.indexOf(a) - order.indexOf(b));
@@ -34,6 +41,10 @@ export function setCell(palette, members) {
 export function cellKey(cell) {
   if (cell.kind === 'set') return `set|${cell.palette}|${cell.members.join(',')}`;
   if (cell.kind === 'scatter' || cell.kind === 'multi' || cell.kind === 'split') return globalCellKey(cell);
+  if (cell.kind === 'composite') {
+    const o = canonicalOrientation(cell.shape, cell.rot, cell.flip);
+    return `cp|${cell.shape}|${cell.fill}|${o.r},${o.f}|${cell.parts.join(',')}`;
+  }
   const o = canonicalOrientation(cell.shape, cell.rot, cell.flip);
   const pos = cell.count === 1 ? `${cell.x},${cell.y}` : 'layout';
   const inner = !cell.inner || cell.inner === 'none' ? '-' : `${cell.inner},${cell.innerFill}`;

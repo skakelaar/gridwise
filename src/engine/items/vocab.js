@@ -3,6 +3,12 @@ import { VOCAB, ODD_SETS, CLOZE } from './wordbank.js';
 
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
+// Clusters whose members shade into one another (an "energy" word is often a fair opposite of a "care" word),
+// so distractors are never drawn from a kin cluster of the target.
+const KIN = [['energy', 'care', 'willing', 'persistence'], ['calm', 'friendliness', 'joy'], ['clarity', 'truth', 'speech']];
+const kinOf = (cluster) => KIN.find((k) => k.includes(cluster)) || [cluster];
+const farFrom = (cluster) => (v) => !kinOf(cluster).includes(v.cluster);
+
 function synonymOrAntonym(difficulty, rng, wantAntonym) {
   const level = Math.min(5, Math.max(1, difficulty));
   const pool = VOCAB.filter((v) => v.level === level);
@@ -10,7 +16,7 @@ function synonymOrAntonym(difficulty, rng, wantAntonym) {
   const answer = rng.pick(wantAntonym ? target.ant : target.syn);
   const related = new Set([target.w, ...target.syn, ...target.ant]);
   // distractors: same part of speech, different cluster, from nearby levels; never a listed synonym/antonym of the target
-  const near = VOCAB.filter((v) => v.cluster !== target.cluster && v.pos === target.pos && Math.abs(v.level - level) <= 1);
+  const near = VOCAB.filter((v) => farFrom(target.cluster)(v) && v.pos === target.pos && Math.abs(v.level - level) <= 1);
   const cands = rng.shuffle(near.flatMap((v) => [v.w, ...v.syn]).filter((w) => !related.has(w)));
   const uniq = [...new Set(cands)].slice(0, 3);
   // one "trap": the opposite kind of relation (an antonym when a synonym is asked, and vice versa)
@@ -61,8 +67,9 @@ function cloze(difficulty, rng) {
   const entry = VOCAB.find((v) => v.w === c.w);
   if (!entry) return null;
   const related = new Set([entry.w, ...entry.syn, ...entry.ant]);
-  const near = VOCAB.filter((v) => v.cluster !== entry.cluster && v.pos === entry.pos && Math.abs(v.level - level) <= 1);
-  const cands = [...new Set(rng.shuffle(near.map((v) => v.w)).filter((w) => !related.has(w)))].slice(0, 3);
+  const avoid = new Set(c.avoid || []);
+  const near = VOCAB.filter((v) => farFrom(entry.cluster)(v) && v.pos === entry.pos && Math.abs(v.level - level) <= 1);
+  const cands = [...new Set(rng.shuffle(near.map((v) => v.w)).filter((w) => !related.has(w) && !avoid.has(w)))].slice(0, 3);
   const trap = rng.pick(entry.ant);
   const words = [entry.w, trap, ...cands];
   if (new Set(words).size !== 5) return null;

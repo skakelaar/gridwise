@@ -100,6 +100,33 @@ export function checkSetText(p, issues) {
   for (const h of p.hints) if (h.includes(p.description.options[p.correctIndex])) issues.push(`${p.id}: hint reveals the answer: "${h}"`);
 }
 
+export function checkCompositeText(p, issues) {
+  const names = SET_PALETTES.parts.names;
+  const elements = SET_PALETTES.parts.elements;
+  const has = (s, e) => new RegExp(`(^|[^\\w-])${names[e]}(?![\\w-])`).test(s);
+  const o = p.setRule.orientation;
+  const [first, second] = o === 'row' ? [p.cells[6], p.cells[7]] : [p.cells[2], p.cells[5]];
+  const marks = p.explanation.missing.find((m) => m.startsWith('Marks:'));
+  const last = p.explanation.missing[p.explanation.missing.length - 1];
+  if (!marks) { issues.push(`${p.id}: no marks sentence`); return; }
+  const [s0, s1] = marks.split(/;\s*/);
+  const inputs = new Set([...first.parts, ...second.parts]);
+  for (const e of elements) {
+    if (inputs.has(e) && !has(s0, e)) issues.push(`${p.id}: "${s0}" omits ${names[e]} which is in an input cell`);
+    if (!inputs.has(e) && has(s0, e)) issues.push(`${p.id}: "${s0}" names ${names[e]} which is in neither input cell`);
+    const inAnswer = p.cells[8].parts.includes(e);
+    if (inAnswer && !has(s1 || '', e)) issues.push(`${p.id}: "${s1}" omits answer mark ${names[e]}`);
+    if (!inAnswer && has(s1 || '', e)) issues.push(`${p.id}: "${s1}" names ${names[e]} which is not in the answer`);
+  }
+  if (!last.includes(text.describeCell(p.cells[8]))) issues.push(`${p.id}: final sentence "${last}" does not describe the answer`);
+  for (const r of p.rules) {
+    if (r.type === 'const') continue;
+    const sentence = p.explanation.missing.find((m) => m.startsWith('Figure:') && m.toLowerCase().includes(text.ATTR_LABEL[r.attr].split(' ')[0]) ) || p.explanation.missing.find((m) => m.startsWith('Figure:'));
+    if (!sentence) issues.push(`${p.id}: no figure sentence for ${r.attr}`);
+  }
+  for (const h of p.hints) if (h.includes(p.description.options[p.correctIndex])) issues.push(`${p.id}: hint reveals the answer: "${h}"`);
+}
+
 // ---------------------------------------------------------------- test-wiseness probe
 // Distractors are perturbations of the answer, so the option whose attributes agree with the majority of options
 // may be the answer more often than chance. Count how often that heuristic (ties → fail) picks correctIndex.
@@ -111,6 +138,21 @@ export function majorityPick(p) {
       const inO = o.members.includes(e);
       return s + ((inO && n > 3) || (!inO && n < 3) ? 1 : 0);
     }, 0));
+    const best = Math.max(...score);
+    const winners = score.map((s, i) => (s === best ? i : -1)).filter((i) => i >= 0);
+    return winners.length === 1 ? winners[0] : -1;
+  }
+  if (p.options[0].kind === 'composite') {
+    // per attribute of the figure plus per mark element
+    const elements = [...new Set(p.options.flatMap((o) => o.parts))];
+    const canon = (o) => { const c = canonicalOrientation(o.shape, o.rot, o.flip); return { shape: o.shape, fill: o.fill, o: `${c.r},${c.f}` }; };
+    const obs = p.options.map(canon);
+    const score = p.options.map((o, i) => {
+      let s = 0;
+      for (const a of ['shape', 'fill', 'o']) { const n = obs.filter((x) => x[a] === obs[i][a]).length; if (n > 3) s++; }
+      for (const e of elements) { const n = p.options.filter((x) => x.parts.includes(e)).length; const inO = o.parts.includes(e); if ((inO && n > 3) || (!inO && n < 3)) s++; }
+      return s;
+    });
     const best = Math.max(...score);
     const winners = score.map((s, i) => (s === best ? i : -1)).filter((i) => i >= 0);
     return winners.length === 1 ? winners[0] : -1;
@@ -188,7 +230,7 @@ for (const family of FAMILY_IDS) {
       for (let i = 0; i < 6; i++) for (let j = i + 1; j < 6; j++) if (svgs[i] === svgs[j]) svgDupes.push(`${p.id}: options ${i} and ${j}`);
 
       // (b) explanation text vs cell values
-      if (p.kind === 'figure') checkFigureText(p, textIssues); else if (p.kind === 'set') checkSetText(p, textIssues);
+      if (p.kind === 'figure') checkFigureText(p, textIssues); else if (p.kind === 'set') checkSetText(p, textIssues); else if (p.kind === 'composite') checkCompositeText(p, textIssues);
 
       // (c) distractor equal to a matrix cell other than 7, 5, 4; and copy codes point at the right cell
       const matrixKeys = p.cells.slice(0, 8).map(cellKey);

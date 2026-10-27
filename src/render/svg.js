@@ -56,9 +56,10 @@ export function renderCell(cell, opts = {}) {
     : cell.kind === 'scatter' ? renderScatter(cell)
     : cell.kind === 'multi' ? renderMulti(cell)
     : cell.kind === 'split' ? renderSplit(cell)
+    : cell.kind === 'composite' ? renderComposite(cell, id)
     : renderFigure(cell, id);
   const hasInner = cell.kind === 'figure' && cell.inner && cell.inner !== 'none' && cell.count === 1;
-  const defs = cell.kind === 'figure' && (cell.fill === 'hatched' || (hasInner && cell.innerFill === 'hatched'))
+  const defs = ((cell.kind === 'figure' || cell.kind === 'composite') && cell.fill === 'hatched') || (hasInner && cell.innerFill === 'hatched')
     ? `<defs><pattern id="${id}-h" patternUnits="userSpaceOnUse" width="7" height="7" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="7" stroke="currentColor" stroke-width="2.4"/></pattern></defs>`
     : '';
   const aria = label ? ` role="img" aria-label="${escapeAttr(label)}"` : ' aria-hidden="true"';
@@ -86,6 +87,23 @@ function renderFigure(cell, id) {
     const inFill = cell.innerFill === 'solid' ? 'currentColor' : cell.innerFill === 'hatched' ? `url(#${id}-h)` : 'var(--cell-bg, #fff)';
     out += `<g fill="${inFill}" stroke="currentColor" stroke-width="${(3 / inScale).toFixed(2)}" stroke-linejoin="round" transform="translate(${cx} ${cy}) scale(${inScale.toFixed(3)})">${SHAPE_PATHS[cell.inner]}</g>`;
   }
+  return out;
+}
+
+// Composite cell: one medium figure in the middle, small marks at fixed anchors around it.
+const PART_GEOM = {
+  dot: '<circle cx="17" cy="17" r="5.5" fill="currentColor" stroke="none"/>',
+  ring: '<circle cx="83" cy="17" r="6" fill="var(--cell-bg,#fff)" stroke="currentColor" stroke-width="3"/>',
+  cross: '<path d="M11,77 L23,89 M11,89 L23,77" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>',
+  square: '<rect x="77" y="77" width="12" height="12" fill="currentColor" stroke="none"/>',
+  bar: '<path d="M36,90 H64" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>',
+};
+function renderComposite(cell, id) {
+  const scale = 0.66;
+  const fillAttr = cell.fill === 'solid' ? 'currentColor' : cell.fill === 'hatched' ? `url(#${id}-h)` : 'var(--cell-bg, #fff)';
+  const orient = `rotate(${cell.rot * 45})${cell.flip ? ' scale(-1,1)' : ''}`;
+  let out = `<g fill="${fillAttr}" stroke="currentColor" stroke-width="${(3 / scale).toFixed(2)}" stroke-linejoin="round"><g transform="translate(50 50) scale(${scale}) ${orient}">${SHAPE_PATHS[cell.shape]}</g></g>`;
+  for (const p of cell.parts) out += PART_GEOM[p] || '';
   return out;
 }
 

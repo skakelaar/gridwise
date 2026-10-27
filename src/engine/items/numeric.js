@@ -166,11 +166,13 @@ function compareFractions(rng) {
 
 function fractionMultiply(rng) {
   const d1 = rng.pick([2, 3, 4, 5, 6]), d2 = rng.pick([2, 3, 4, 5, 6, 8]);
-  const n1 = rng.range(1, d1 - 1), n2 = rng.range(1, d2 - 1);
+  // inputs are shown in lowest terms
+  const n1 = rng.pick([...Array(d1 - 1).keys()].map((i) => i + 1).filter((n) => gcd(n, d1) === 1));
+  const n2 = rng.pick([...Array(d2 - 1).keys()].map((i) => i + 1).filter((n) => gcd(n, d2) === 1));
   const divide = rng.chance(0.4);
   const [rn, rd] = divide ? simplify(n1 * d2, d1 * n2) : simplify(n1 * n2, d1 * d2);
-  const key = (n, d) => `${n}/${d}`;
-  const wrongs = [simplify(n1 * n2, d1 * d2), simplify(n1 * d2, d1 * n2), simplify(n1 + n2, d1 + d2), simplify(n1 * d2 + n2 * d1, d1 * d2), [rn + 1, rd], simplify(n1 * n2, d1 + d2)]
+  const key = (n, d) => { const [a, b] = simplify(n, d); return `${a}/${b}`; };
+  const wrongs = [simplify(n1 * n2, d1 * d2), simplify(n1 * d2, d1 * n2), simplify(n1 + n2, d1 + d2), simplify(n1 * d2 + n2 * d1, d1 * d2), simplify(rn + 1, rd), simplify(n1 * n2, d1 + d2)]
     .filter((w) => w[0] > 0 && w[1] > 0 && key(...w) !== key(rn, rd));
   const uniq = []; for (const w of wrongs) if (!uniq.some((u) => key(...u) === key(...w))) uniq.push(w);
   if (uniq.length < 4) return null;

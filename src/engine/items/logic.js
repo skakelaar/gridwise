@@ -2,10 +2,53 @@
 // Universal statements (modus ponens / tollens / no valid conclusion) and ordering problems whose
 // answer is determined, or not, by checking every consistent order.
 
-const NONE = 'None of these conclusions is logically inescapable';
+export const NONE = 'None of these conclusions is logically inescapable';
+
+const strip = (x) => String(x).replace(/\.$/, '');
+const PLURAL_VERB = { has: 'have', wears: 'wear', starts: 'start', reads: 'read', trains: 'train', owns: 'own', can: 'can' };
+const pluralVerb = (has) => has.replace(/^(has|wears|starts|reads|trains|owns|can)/, (v) => PLURAL_VERB[v]);
+const bare = (sing) => sing.replace(/^an? /, '');
+const singular = (plural) => plural.replace(/ies$/, 'y').replace(/s$/, '');
+/** Notes for class-statement options: a contradiction of the forced conclusion, a reversed premise, or "not forced". */
+function classReasons(answer, premises, pool) {
+  const parse = (x) => { const m = String(x).match(/^(All|Some|No) (.+?) are (not )?(.+)$/); return m && { q: m[1], a: m[2], neg: !!m[3], b: m[4] }; };
+  const ans = answer === NONE ? null : parse(answer);
+  const reasons = {};
+  for (const o of pool) {
+    const c = parse(o);
+    if (!c) continue;
+    if (ans && c.a === ans.a && c.b === ans.b) {
+      const contra = (ans.q === 'All' && !ans.neg && (c.q === 'No' || (c.q === 'Some' && c.neg)))
+        || (ans.q === 'Some' && !ans.neg && c.q === 'No')
+        || (ans.q === 'No' && (c.q === 'All' || (c.q === 'Some' && !c.neg)))
+        || (ans.q === 'Some' && ans.neg && c.q === 'All' && !c.neg);
+      if (contra) { reasons[o] = `contradicts what the statements force: ${answer.charAt(0).toLowerCase()}${answer.slice(1)}`; continue; }
+    }
+    const reversed = premises.map(strip).map(parse).find((pr) => pr && pr.q === 'All' && c.q === 'All' && !c.neg && pr.a === c.b && pr.b === c.a);
+    if (reversed) { reasons[o] = `reverses "all ${reversed.a} are ${reversed.b}": the ${reversed.b} may include many things that are not ${reversed.a}`; continue; }
+    // contradicts a premise ("no" and "some … are" are symmetric in their two terms)
+    const sameTerms = (x, y) => (x.a === y.a && x.b === y.b) || ((x.q === 'No' || (x.q === 'Some' && !x.neg)) && x.a === y.b && x.b === y.a);
+    const clash = premises.map(strip).map(parse).find((pr) => pr && sameTerms(c, pr) && (
+      (pr.q === 'All' && !pr.neg && (c.q === 'No' || (c.q === 'Some' && c.neg && c.a === pr.a)))
+      || (pr.q === 'No' && (c.q === 'All' || (c.q === 'Some' && !c.neg)))
+      || (pr.q === 'Some' && !pr.neg && c.q === 'No')));
+    if (clash) { reasons[o] = `contradicts the statement "${premises.map(strip).find((x) => { const q = parse(x); return q && q.a === clash.a && q.b === clash.b; })}"`; continue; }
+  }
+  return reasons;
+}
+/** Attach a per-option "why this is tempting" note. `reasons` maps option text → note; the rest get a generic note. */
+function withDistractors(item, reasons = {}) {
+  const answer = item.options[item.correctIndex];
+  item.distractors = item.options.map((o, i) => (i === item.correctIndex ? null : {
+    index: i,
+    code: o === NONE ? 'none-when-forced' : reasons[o] ? 'named-fallacy' : 'not-forced',
+    text: reasons[o] || (o === NONE ? `claims nothing follows, but one conclusion is forced: ${answer}` : 'may well be true, but the statements do not force it'),
+  }));
+  return item;
+}
 
 // Original vocabulary: [group noun (plural, singular), property (verb phrase, negated, noun form for the converse)]
-const GROUPS_BANK = [
+export const GROUPS_BANK = [
   { plural: 'lifeguards', singular: 'a lifeguard', has: 'can swim', hasNot: 'cannot swim', converse: 'Everyone who can swim is a lifeguard', plausible: ['Lifeguards work mainly in summer', 'Swimming is good exercise'] },
   { plural: 'members of the chess club', singular: 'a member of the chess club', has: 'wears a badge', hasNot: 'does not wear a badge', converse: 'Everyone who wears a badge is a member of the chess club', plausible: ['Chess is a game of skill', 'The chess club meets on Thursdays'] },
   { plural: 'bakers in this town', singular: 'a baker in this town', has: 'starts work before dawn', hasNot: 'does not start work before dawn', converse: 'Everyone who starts work before dawn is a baker in this town', plausible: ['Bread is best eaten fresh', 'Bakers use flour'] },
@@ -17,7 +60,7 @@ const GROUPS_BANK = [
 ];
 
 // Conditionals: if <condition>, then <result>.
-const CONDITIONALS = [
+export const CONDITIONALS = [
   { cond: 'it rains on Saturday', condNot: 'it does not rain on Saturday', condPast: 'It rained on Saturday', condNotPast: 'It did not rain on Saturday', res: 'the match is postponed', resPast: 'The match was postponed', resNotPast: 'The match was not postponed' },
   { cond: 'the alarm is set', condNot: 'the alarm is not set', condPast: 'The alarm was set', condNotPast: 'The alarm was not set', res: 'Mila wakes at six', resPast: 'Mila woke at six', resNotPast: 'Mila did not wake at six' },
   { cond: 'the bridge is closed', condNot: 'the bridge is not closed', condPast: 'The bridge was closed', condNotPast: 'The bridge was not closed', res: 'the bus takes the long route', resPast: 'The bus took the long route', resNotPast: 'The bus did not take the long route' },
@@ -25,8 +68,17 @@ const CONDITIONALS = [
   { cond: 'the shop has power', condNot: 'the shop does not have power', condPast: 'The shop had power', condNotPast: 'The shop did not have power', res: 'the till works', resPast: 'The till worked', resNotPast: 'The till did not work' },
 ];
 
+// Chained conditionals with coherent content: if a then b; if b then c.
+export const CHAIN_CONDITIONALS = [
+  { a: { cond: 'it rains on Saturday', past: 'It rained on Saturday', notPast: 'It did not rain on Saturday' }, b: { cond: 'the match is postponed', past: 'The match was postponed', notPast: 'The match was not postponed' }, c: { cond: 'the final is played a week later', past: 'The final was played a week later', notPast: 'The final was not played a week later' } },
+  { a: { cond: 'the alarm is set', past: 'The alarm was set', notPast: 'The alarm was not set' }, b: { cond: 'Mila wakes at six', past: 'Mila woke at six', notPast: 'Mila did not wake at six' }, c: { cond: 'Mila catches the early train', past: 'Mila caught the early train', notPast: 'Mila did not catch the early train' } },
+  { a: { cond: 'the bridge is closed', past: 'The bridge was closed', notPast: 'The bridge was not closed' }, b: { cond: 'the bus takes the long route', past: 'The bus took the long route', notPast: 'The bus did not take the long route' }, c: { cond: 'the bus arrives late', past: 'The bus arrived late', notPast: 'The bus did not arrive late' } },
+  { a: { cond: 'the oven is hot enough', past: 'The oven was hot enough', notPast: 'The oven was not hot enough' }, b: { cond: 'the loaf rises', past: 'The loaf rose', notPast: 'The loaf did not rise' }, c: { cond: 'the crust turns golden', past: 'The crust turned golden', notPast: 'The crust did not turn golden' } },
+  { a: { cond: 'the shop has power', past: 'The shop had power', notPast: 'The shop did not have power' }, b: { cond: 'the till works', past: 'The till worked', notPast: 'The till did not work' }, c: { cond: 'receipts are printed', past: 'Receipts were printed', notPast: 'No receipts were printed' } },
+];
+
 // Chained syllogisms: three class terms.
-const CHAINS = [
+export const CHAINS = [
   ['tulips', 'spring flowers', 'plants that need sunlight'],
   ['sonnets', 'poems', 'works of literature'],
   ['ferries', 'boats', 'vehicles that float'],
@@ -38,7 +90,7 @@ const NAMES = ['Frank', 'Nadia', 'Tomas', 'Priya', 'Lena', 'Omar', 'Yuki', 'Marc
 function universal(difficulty, rng) {
   const g = rng.pick(GROUPS_BANK);
   const name = rng.pick(NAMES);
-  const first = `All ${g.plural} ${g.has.replace(/^(has|wears|starts|reads|trains|owns|can)/, (v) => ({ has: 'have', wears: 'wear', starts: 'start', reads: 'read', trains: 'train', owns: 'own', can: 'can' }[v]))}.`;
+  const first = `All ${g.plural} ${pluralVerb(g.has)}.`;
   const isA = `${name} is ${g.singular}`;
   const isNotA = `${name} is not ${g.singular}`;
   const hasB = `${name} ${g.has}`;
@@ -57,11 +109,22 @@ function universal(difficulty, rng) {
     ],
   };
   const v = rng.pick(variants[Math.min(3, difficulty)]);
-  const pool = [isA, isNotA, hasB, hasNotB, converse, ...rng.sample(g.plausible, 1)].filter((c) => c !== v.answer);
+  const plausible = rng.sample(g.plausible, 1)[0];
+  // A premise restated is trivially entailed, so it is never offered as an option.
+  const pool = [isA, isNotA, hasB, hasNotB, converse, plausible].filter((c) => c !== v.answer && c !== strip(v.second));
   const picks = rng.sample(pool, 3);
   const candidates = v.answer === NONE ? picks : rng.shuffle([v.answer, ...rng.sample(pool, 2)]);
   const options = [...candidates, NONE];
-  return {
+  const given = strip(v.second);
+  const reasons = {
+    [converse]: `reverses the rule: "all ${g.plural} ${pluralVerb(g.has)}" does not say that everyone who ${g.has} is ${g.singular}`,
+    [plausible]: 'sounds true in general, but it is not stated in either premise',
+    [isA]: given === hasB ? `affirms the consequent: ${name} ${g.has}, but that may be true of many people who are not ${g.plural}` : given === hasNotB ? `contradicts the rule: every ${bare(g.singular)} ${g.has}, and ${name} ${g.hasNot}` : `is not forced: nothing places ${name} inside the group`,
+    [isNotA]: given === isA ? 'contradicts the second statement' : given === hasB ? `is not forced: ${name} may or may not be ${g.singular}` : `is not forced: lacking nothing in the premises, ${name} could still be ${g.singular}`,
+    [hasB]: given === isNotA ? `denies the antecedent: the rule is only about ${g.plural}; it says nothing about whether people outside the group ${pluralVerb(g.has)}` : given === hasNotB ? 'contradicts the second statement' : `is not forced by the statements`,
+    [hasNotB]: given === isA ? `contradicts the rule: all ${g.plural} ${pluralVerb(g.has)}` : given === isNotA ? `denies the antecedent: the rule says nothing about people who are not ${g.plural}` : given === hasB ? 'contradicts the second statement' : 'is not forced by the statements',
+  };
+  return withDistractors({
     question: 'Which statement logically and inescapably follows from the first two statements?',
     prompt: `${first}\n${v.second}`,
     options,
@@ -69,13 +132,13 @@ function universal(difficulty, rng) {
     explanation: { summary: v.answer === NONE ? 'None of the conclusions is logically inescapable.' : `${v.answer}.`, steps: [v.why, 'Statements that are merely plausible or generally true are not conclusions drawn from the two premises.'] },
     hints: ['Treat the first statement as a rule about a whole group. Does the second statement place someone inside that group, or only tell you about the property?', 'A rule "all A have B" never allows you to conclude from "has B" that someone is an A.', `${v.answer === NONE ? 'Nothing follows inescapably here.' : `Only one conclusion is forced: ${v.answer}.`}`],
     features: { rule: 'universal', valid: v.answer !== NONE },
-  };
+  }, reasons);
 }
 
 function negativeUniversal(difficulty, rng) {
   const g = rng.pick(GROUPS_BANK);
   const name = rng.pick(NAMES);
-  const first = `No ${g.plural} ${g.has.replace(/^(has|wears|starts|reads|trains|owns|can)/, (v) => ({ has: 'have', wears: 'wear', starts: 'start', reads: 'read', trains: 'train', owns: 'own', can: 'can' }[v]))}.`;
+  const first = `No ${g.plural} ${pluralVerb(g.has)}.`;
   const isA = `${name} is ${g.singular}`;
   const isNotA = `${name} is not ${g.singular}`;
   const hasB = `${name} ${g.has}`;
@@ -87,10 +150,19 @@ function negativeUniversal(difficulty, rng) {
     { second: `${isNotA}.`, answer: NONE, why: `The first statement is only about ${g.plural}. It says nothing about people who are not ${g.plural}.` },
   ];
   const v = difficulty <= 2 ? rng.pick(variants.slice(0, 2)) : rng.pick(variants);
-  const pool = [isA, isNotA, hasB, hasNotB, ...rng.sample(g.plausible, 1)].filter((c) => c !== v.answer);
+  const plausible = rng.sample(g.plausible, 1)[0];
+  const pool = [isA, isNotA, hasB, hasNotB, plausible].filter((c) => c !== v.answer && c !== strip(v.second));
   const candidates = v.answer === NONE ? rng.sample(pool, 3) : rng.shuffle([v.answer, ...rng.sample(pool, 2)]);
   const options = [...candidates, NONE];
-  return {
+  const given = strip(v.second);
+  const reasons = {
+    [plausible]: 'sounds true in general, but it is not stated in either premise',
+    [isA]: given === hasB ? `contradicts the rule: no ${g.plural} ${pluralVerb(g.has)}, yet ${name} ${g.has}` : `is not forced: lacking the property is shared by ${g.plural} and by many others`,
+    [isNotA]: given === isA ? 'contradicts the second statement' : `is not forced: nothing in the statements keeps ${name} out of the group`,
+    [hasB]: given === isA ? `contradicts the rule: ${name} is ${g.singular}` : given === isNotA ? `is not forced: the rule says nothing about people who are not ${g.plural}` : 'is not forced by the statements',
+    [hasNotB]: given === hasB ? 'contradicts the second statement' : given === isNotA ? `denies the antecedent: "no ${g.plural} …" says nothing about people outside the group` : 'is not forced by the statements',
+  };
+  return withDistractors({
     question: 'Which statement logically and inescapably follows from the first two statements?',
     prompt: `${first}\n${v.second}`,
     options,
@@ -98,7 +170,7 @@ function negativeUniversal(difficulty, rng) {
     explanation: { summary: v.answer === NONE ? 'None of the conclusions is logically inescapable.' : `${v.answer}.`, steps: [v.why, 'Statements that are merely plausible or generally true are not conclusions drawn from the two premises.'] },
     hints: ['"No A have B" rules out the property for every member of A, and rules out membership for anyone with the property.', 'It says nothing about non-members, and nothing about people who lack the property.', v.answer === NONE ? 'Nothing follows inescapably here.' : `Only one conclusion is forced: ${v.answer}.`],
     features: { rule: 'universal-negative', valid: v.answer !== NONE },
-  };
+  }, reasons);
 }
 
 function conditional(difficulty, rng) {
@@ -107,14 +179,21 @@ function conditional(difficulty, rng) {
   const variants = [
     { second: `${c.condPast}.`, answer: c.resPast, why: 'The condition held, so the stated consequence follows.' },
     { second: `${c.resNotPast}.`, answer: c.condNotPast, why: 'Had the condition held, the consequence would have followed. It did not, so the condition cannot have held.' },
-    { second: `${c.resPast}.`, answer: NONE, why: 'The consequence can have other causes; the rule only runs from condition to consequence, not back.' },
-    { second: `${c.condNotPast}.`, answer: NONE, why: 'The rule says what happens when the condition holds. When it does not hold, the consequence may or may not happen.' },
+    { second: `${c.resPast}.`, answer: NONE, why: `This is the trap called affirming the consequent. "${first}" does not say that ${c.cond} is the only way for ${c.res}: it may have happened for some other reason. So "${c.condPast}" is possible but not forced, and nothing else follows.` },
+    { second: `${c.condNotPast}.`, answer: NONE, why: `This is the trap called denying the antecedent. "${first}" says what happens when ${c.cond}; it is silent about what happens when ${c.condNot}. Then ${c.res} may still have come about for another reason, or not at all. "${c.resNotPast}" is possible but not forced, and neither is "${c.resPast}".` },
   ];
   const v = difficulty <= 2 ? rng.pick(variants.slice(0, 2)) : rng.pick(variants);
-  const pool = [c.condPast, c.condNotPast, c.resPast, c.resNotPast].filter((x) => x !== v.answer && x !== v.second.replace(/\.$/, ''));
+  const pool = [c.condPast, c.condNotPast, c.resPast, c.resNotPast].filter((x) => x !== v.answer && x !== strip(v.second));
   const candidates = v.answer === NONE ? rng.sample(pool, 3) : rng.shuffle([v.answer, ...rng.sample(pool, 2)]);
   const options = [...candidates, NONE];
-  return {
+  const given = strip(v.second);
+  const reasons = {
+    [c.condPast]: given === c.resPast ? `affirms the consequent: "${c.res}" can come about without "${c.cond}"` : given === c.resNotPast ? `would mean that ${c.res}, which the second statement rules out` : given === c.condNotPast ? 'contradicts the second statement' : 'is not forced by the statements',
+    [c.condNotPast]: given === c.condPast ? 'contradicts the second statement' : given === c.resPast ? `is not forced: nothing says whether ${c.cond}` : 'is not forced by the statements',
+    [c.resPast]: given === c.condNotPast ? `is not forced: with ${c.condNot}, the rule says nothing either way` : given === c.resNotPast ? 'contradicts the second statement' : 'is not forced by the statements',
+    [c.resNotPast]: given === c.condNotPast ? `denies the antecedent: the rule only says what happens when ${c.cond}; it does not make ${c.cond} the only route to ${c.res}` : given === c.condPast ? `contradicts the rule: the condition held, so ${c.res}` : given === c.resPast ? 'contradicts the second statement' : 'is not forced by the statements',
+  };
+  return withDistractors({
     question: 'Which statement logically and inescapably follows from the first two statements?',
     prompt: `${first}\n${v.second}`,
     options,
@@ -122,23 +201,27 @@ function conditional(difficulty, rng) {
     explanation: { summary: v.answer === NONE ? 'None of the conclusions is logically inescapable.' : `${v.answer}.`, steps: [v.why] },
     hints: ['An "if … then" rule runs in one direction only.', 'From the consequence failing you may conclude the condition failed; from the consequence happening you may conclude nothing.', v.answer === NONE ? 'Nothing follows inescapably here.' : `The forced conclusion: ${v.answer}.`],
     features: { rule: 'conditional', valid: v.answer !== NONE },
-  };
+  }, reasons);
 }
 
 function chain(difficulty, rng) {
   const [A, B, C] = rng.pick(CHAINS);
   const variants = [
-    { first: `All ${A} are ${B}.`, second: `All ${B} are ${C}.`, answer: `All ${A} are ${C}`, why: `Every ${A.replace(/s$/, '')} is among the ${B}, and every one of those is among the ${C}.` },
-    { first: `Some ${A} are ${B}.`, second: `All ${B} are ${C}.`, answer: `Some ${A} are ${C}`, why: `The ${A} that are ${B} are, like all ${B}, also ${C}.` },
+    { first: `All ${A} are ${B}.`, second: `All ${B} are ${C}.`, answer: `All ${A} are ${C}`, also: [`Some ${A} are ${C}`, `Some ${C} are ${A}`, `Some ${C} are ${B}`], why: `Every ${singular(A)} is among the ${B}, and every one of those is among the ${C}.` },
+    { first: `Some ${A} are ${B}.`, second: `All ${B} are ${C}.`, answer: `Some ${A} are ${C}`, also: [`Some ${C} are ${A}`, `Some ${C} are ${B}`], why: `The ${A} that are ${B} are, like all ${B}, also ${C}.` },
     { first: `All ${A} are ${B}.`, second: `Some ${C} are ${B}.`, answer: NONE, why: `The ${C} that are ${B} need not be ${A}: being ${B} does not make something one of the ${A}.` },
-    { first: `No ${B} are ${C}.`, second: `All ${A} are ${B}.`, answer: `No ${A} are ${C}`, why: `Every ${A.replace(/s$/, '')} is one of the ${B}, and none of the ${B} are ${C}.` },
+    { first: `No ${B} are ${C}.`, second: `All ${A} are ${B}.`, answer: `No ${A} are ${C}`, also: [`No ${C} are ${A}`, `Some ${A} are not ${C}`], why: `Every ${singular(A)} is one of the ${B}, and none of the ${B} are ${C}.` },
     { first: `All ${A} are ${B}.`, second: `No ${A} are ${C}.`, answer: NONE, why: `The ${A} are only part of the ${B}; other ${B} may well be ${C}.` },
   ];
   const v = difficulty <= 3 ? rng.pick(variants.slice(0, 2).concat(variants[3])) : rng.pick(variants);
-  const pool = [`All ${A} are ${C}`, `Some ${A} are ${C}`, `No ${A} are ${C}`, `All ${C} are ${A}`, `Some ${C} are ${B}`, `No ${B} are ${A}`, `All ${B} are ${A}`].filter((x) => x !== v.answer);
+  // Statements that are the answer, a premise, or defensible alongside the answer (e.g. "some A are C" when
+  // "all A are C" holds) never appear as options.
+  const banned = new Set([v.answer, strip(v.first), strip(v.second), ...(v.also || [])]);
+  const pool = [`All ${A} are ${C}`, `Some ${A} are ${C}`, `No ${A} are ${C}`, `All ${C} are ${A}`, `Some ${C} are ${B}`, `No ${B} are ${A}`, `All ${B} are ${A}`].filter((x) => !banned.has(x));
   const candidates = v.answer === NONE ? rng.sample(pool, 3) : rng.shuffle([v.answer, ...rng.sample(pool, 2)]);
   const options = [...candidates, NONE];
-  return {
+  const reasons = classReasons(v.answer, [v.first, v.second], pool);
+  return withDistractors({
     question: 'Which statement logically and inescapably follows from the first two statements?',
     prompt: `${v.first}\n${v.second}`,
     options,
@@ -146,24 +229,26 @@ function chain(difficulty, rng) {
     explanation: { summary: v.answer === NONE ? 'None of the conclusions is logically inescapable.' : `${v.answer}.`, steps: [v.why, 'Draw the groups as nested or overlapping circles to check each candidate.'] },
     hints: ['Picture each statement as circles: "all A are B" puts the A circle inside B.', '"Some" only guarantees an overlap; "no" keeps circles apart.', v.answer === NONE ? 'No candidate is forced by the picture.' : `Forced: ${v.answer}.`],
     features: { rule: 'chain', valid: v.answer !== NONE },
-  };
+  }, reasons);
 }
 
 function chain3(difficulty, rng) {
   const [A, B, C] = rng.pick(CHAINS);
   const D = rng.pick(['things kept in a museum', 'things that need water', 'things sold at the market', 'things found in a valley', 'things listed in the register'].filter((x) => x !== C));
   const variants = [
-    { p: [`All ${A} are ${B}.`, `All ${B} are ${C}.`, `No ${C} are ${D}.`], answer: `No ${A} are ${D}`, why: `Every ${A.replace(/s$/, '')} is one of the ${B}, hence one of the ${C}, and none of the ${C} are ${D}.` },
-    { p: [`Some ${A} are ${B}.`, `All ${B} are ${C}.`, `All ${C} are ${D}.`], answer: `Some ${A} are ${D}`, why: `The ${A} that are ${B} are also ${C}, and therefore also ${D}.` },
+    { p: [`All ${A} are ${B}.`, `All ${B} are ${C}.`, `No ${C} are ${D}.`], answer: `No ${A} are ${D}`, also: [`Some ${D} are not ${A}`, `Some ${C} are ${A}`, `No ${B} are ${D}`, `No ${D} are ${A}`], why: `Every ${singular(A)} is one of the ${B}, hence one of the ${C}, and none of the ${C} are ${D}.` },
+    { p: [`Some ${A} are ${B}.`, `All ${B} are ${C}.`, `All ${C} are ${D}.`], answer: `Some ${A} are ${D}`, also: [`Some ${C} are ${A}`], why: `The ${A} that are ${B} are also ${C}, and therefore also ${D}.` },
     { p: [`All ${A} are ${B}.`, `Some ${B} are ${C}.`, `All ${C} are ${D}.`], answer: NONE, why: `The ${B} that are ${C} need not be ${A}, so nothing links the ${A} to the ${C} or the ${D}.` },
-    { p: [`No ${A} are ${B}.`, `All ${C} are ${B}.`, `Some ${D} are ${C}.`], answer: `Some ${D} are not ${A}`, why: `The ${D} that are ${C} are ${B}, and no ${B} can be ${A}, so those ${D} are not ${A}.` },
-    { p: [`All ${A} are ${B}.`, `All ${A} are ${C}.`, `Some ${D} are ${B}.`], answer: NONE, why: `Being ${B} or ${C} does not make something one of the ${A}; the ${D} that are ${B} may or may not be ${A} or ${C}.` },
+    { p: [`No ${A} are ${B}.`, `All ${C} are ${B}.`, `Some ${D} are ${C}.`], answer: `Some ${D} are not ${A}`, also: [`No ${C} are ${A}`], why: `The ${D} that are ${C} are ${B}, and no ${B} can be ${A}, so those ${D} are not ${A}.` },
+    { p: [`All ${A} are ${B}.`, `All ${A} are ${C}.`, `Some ${D} are ${B}.`], answer: NONE, also: [`Some ${C} are ${A}`], why: `Being ${B} or ${C} does not make something one of the ${A}; the ${D} that are ${B} may or may not be ${A} or ${C}.` },
   ];
   const v = rng.pick(variants);
-  const pool = [`No ${A} are ${D}`, `Some ${A} are ${D}`, `All ${A} are ${D}`, `Some ${D} are not ${A}`, `All ${D} are ${C}`, `No ${B} are ${D}`, `Some ${C} are ${A}`, `All ${B} are ${A}`].filter((x) => x !== v.answer);
+  const banned = new Set([v.answer, ...v.p.map(strip), ...(v.also || [])]);
+  const pool = [`No ${A} are ${D}`, `Some ${A} are ${D}`, `All ${A} are ${D}`, `Some ${D} are not ${A}`, `All ${D} are ${C}`, `No ${B} are ${D}`, `Some ${C} are ${A}`, `All ${B} are ${A}`].filter((x) => !banned.has(x));
+  if (pool.length < 3) return null;
   const candidates = v.answer === NONE ? rng.sample(pool, 3) : rng.shuffle([v.answer, ...rng.sample(pool, 2)]);
   const options = [...candidates, NONE];
-  return {
+  return withDistractors({
     question: 'Which statement logically and inescapably follows from the three statements?',
     prompt: v.p.join('\n'),
     options,
@@ -171,25 +256,37 @@ function chain3(difficulty, rng) {
     explanation: { summary: v.answer === NONE ? 'None of the conclusions is logically inescapable.' : `${v.answer}.`, steps: [v.why, 'Chain the statements only where a class term is fully covered ("all" or "no"); "some" carries over just the part it names.'] },
     hints: ['Link the statements through the class term they share.', 'A chain breaks wherever the shared term is only "some" of a class.', v.answer === NONE ? 'No candidate survives the chain.' : `Forced: ${v.answer}.`],
     features: { rule: 'chain3', valid: v.answer !== NONE },
-  };
+  }, classReasons(v.answer, v.p, pool));
 }
 
 function conditionalChain(difficulty, rng) {
-  const [c1, c2] = rng.sample(CONDITIONALS, 2);
-  // If c1.cond then c1.res. If c1.res then c2.res.  (the middle term is reused as a condition)
-  const first = `If ${c1.cond}, then ${c1.res}.`;
-  const second = `If ${c1.res}, then ${c2.res}.`;
+  const t = rng.pick(CHAIN_CONDITIONALS);
+  const { a, b, c } = t;
+  const first = `If ${a.cond}, then ${b.cond}.`;
+  const second = `If ${b.cond}, then ${c.cond}.`;
   const variants = [
-    { third: `${c2.resNotPast}.`, answer: c1.condNotPast, why: 'Had the first condition held, both consequences would have followed. The final consequence did not, so the first condition cannot have held.' },
-    { third: `${c1.condPast}.`, answer: c2.resPast, why: 'The first condition held, so the first consequence followed, and with it the second.' },
-    { third: `${c2.resPast}.`, answer: NONE, why: 'The final consequence may have other causes; the rules only run forwards.' },
-    { third: `${c1.resNotPast}.`, answer: c1.condNotPast, why: 'The first consequence failed, so its condition cannot have held. Nothing follows about the final consequence, which may have other causes.' },
+    { third: `${c.notPast}.`, answer: a.notPast, also: [b.notPast], why: `Had ${a.cond}, then ${b.cond}, and then ${c.cond}. The last of these did not happen, so neither of the earlier ones can have: the chain runs backwards from a failed consequence.` },
+    { third: `${a.past}.`, answer: c.past, also: [b.past], why: `${a.past}, so ${b.cond}; and because ${b.cond}, ${c.cond}. The chain runs forwards from a condition that held.` },
+    { third: `${c.past}.`, answer: NONE, why: `Affirming the consequent: "${c.past}" may have come about without ${b.cond}, and ${b.cond} without ${a.cond}. The rules only run forwards, so nothing is forced.` },
+    { third: `${b.notPast}.`, answer: a.notPast, why: `${b.notPast}, so its condition cannot have held: ${a.notPast.charAt(0).toLowerCase()}${a.notPast.slice(1)}. Nothing follows about whether ${c.cond}, which may have other causes.` },
   ];
   const v = rng.pick(variants);
-  const pool = [c1.condPast, c1.condNotPast, c1.resPast, c1.resNotPast, c2.resPast, c2.resNotPast].filter((x) => x !== v.answer && `${x}.` !== v.third);
+  // The intermediate consequence follows too whenever the final one does, so it is never offered beside it.
+  const banned = new Set([v.answer, strip(v.third), ...(v.also || [])]);
+  const pool = [a.past, a.notPast, b.past, b.notPast, c.past, c.notPast].filter((x) => !banned.has(x));
   const candidates = v.answer === NONE ? rng.sample(pool, 3) : rng.shuffle([v.answer, ...rng.sample(pool, 2)]);
   const options = [...candidates, NONE];
-  return {
+  const given = strip(v.third);
+  const neg = { [a.past]: a.notPast, [a.notPast]: a.past, [b.past]: b.notPast, [b.notPast]: b.past, [c.past]: c.notPast, [c.notPast]: c.past };
+  const reasons = {};
+  for (const o of pool) {
+    if (neg[o] === given) reasons[o] = 'contradicts the third statement';
+    else if (v.answer !== NONE && neg[o] === v.answer) reasons[o] = `contradicts what the statements force: ${v.answer.charAt(0).toLowerCase()}${v.answer.slice(1)}`;
+    else if (given === c.past && (o === a.past || o === b.past)) reasons[o] = `affirms the consequent: ${c.cond} can come about without it`;
+    else if (given === b.notPast && (o === c.past || o === c.notPast)) reasons[o] = `is not forced: with ${b.cond.replace(/^(\w+) /, '$1 not ')}, the second rule says nothing either way`;
+    else if (given === c.notPast && o === a.past) reasons[o] = `would mean that ${b.cond} and then ${c.cond}, which the third statement rules out`;
+  }
+  return withDistractors({
     question: 'Which statement logically and inescapably follows from the three statements?',
     prompt: `${first}\n${second}\n${v.third}`,
     options,
@@ -197,7 +294,7 @@ function conditionalChain(difficulty, rng) {
     explanation: { summary: v.answer === NONE ? 'None of the conclusions is logically inescapable.' : `${v.answer}.`, steps: [v.why] },
     hints: ['Two "if … then" rules join into one longer chain.', 'From a failed consequence you may walk backwards up the chain; from a consequence that happened you may conclude nothing.', v.answer === NONE ? 'Nothing is forced.' : `Forced: ${v.answer}.`],
     features: { rule: 'conditional-chain', valid: v.answer !== NONE },
-  };
+  }, reasons);
 }
 
 const ATTRS = [
@@ -224,9 +321,11 @@ function ordering(difficulty, rng) {
   for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) if (i !== j && rank[names[i]] < rank[names[j]]) pairs.push([names[i], names[j]]);
   const wantDetermined = difficulty <= 3 ? true : rng.chance(0.5);
   let chosen = null;
-  for (let tries = 0; tries < 40 && !chosen; tries++) {
+  for (let tries = 0; tries < 80 && !chosen; tries++) {
     const k = n === 3 ? 2 : n === 4 ? rng.range(2, 3) : n === 5 ? rng.range(3, 4) : rng.range(4, 5);
     const cand = rng.sample(pairs, k);
+    // Every person must be mentioned: an unmentioned name in the options would make "none" a trick answer.
+    if (names.some((nm) => !cand.some(([a, b]) => a === nm || b === nm))) continue;
     const consistent = permutations(names).filter((p) => cand.every(([a, b]) => p.indexOf(a) < p.indexOf(b)));
     const tops = new Set(consistent.map((p) => p[askPos]));
     const determined = tops.size === 1;
@@ -245,11 +344,14 @@ function ordering(difficulty, rng) {
   const options = [...rng.shuffle(names).slice(0, Math.min(4, names.length)), NONE];
   const answer = chosen.top ?? NONE;
   if (chosen.top && !options.includes(chosen.top)) { options[0] = chosen.top; }
-  const posWord = askPos === 0 ? attr.superl : askPos === 1 ? `second ${attr.superl}` : `least ${attr.adj.replace(/er$/, '')}`.replace('least tall', 'shortest').replace('least old', 'youngest').replace('least fast', 'slowest').replace('least heav', 'lightest').replace('least rich', 'poorest');
+  const LEAST = { taller: 'shortest', older: 'youngest', faster: 'slowest', heavier: 'lightest', richer: 'poorest' };
+  const posWord = askPos === 0 ? attr.superl : askPos === 1 ? `second ${attr.superl}` : LEAST[attr.adj];
   const why = chosen.top
     ? `Every order that fits the statements agrees on that position.`
     : `More than one order fits the statements (for example ${chosen.consistent.slice(0, 2).map((p) => p.join(' > ')).join(' or ')}), so that position is not determined.`;
-  return {
+  const reasons = {};
+  for (const nm of names) if (nm !== answer) reasons[nm] = chosen.top ? `is never the ${posWord}: every order that fits the statements puts ${chosen.top} there` : (chosen.consistent.some((p) => p[askPos] === nm) ? `is the ${posWord} in some orders that fit the statements, but not in all of them` : `is never the ${posWord} in any order that fits the statements`);
+  return withDistractors({
     question: 'Which statement logically and inescapably follows from the statements?',
     prompt: `${prompt}\nWho is the ${posWord}?`,
     options,
@@ -257,7 +359,7 @@ function ordering(difficulty, rng) {
     explanation: { summary: chosen.top ? `${chosen.top} is the ${posWord}.` : 'None of the conclusions is logically inescapable.', steps: [chosen.top ? `Every order consistent with the statements puts ${chosen.top} in that position (for example ${chosen.consistent[0].join(' > ')}).` : why] },
     hints: ['Write the people in a line from the statements, one comparison at a time.', 'Check whether the statements pin down the position asked about, or leave two people who could both fill it.', chosen.top ? `${chosen.top} must be the ${posWord}.` : 'That position is not fixed by the statements.'],
     features: { rule: 'ordering', people: n, valid: !!chosen.top },
-  };
+  }, reasons);
 }
 
 const BUILDERS = { universal, negative: negativeUniversal, conditional, chain, ordering, chain3, conditionalChain };

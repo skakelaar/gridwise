@@ -41,6 +41,8 @@ verification    solver output (predictions per attribute / set) for debugging an
 figure: { kind:'figure', shape, fill:'none'|'solid'|'hatched', size:'small'|'medium'|'large',
           rot:0..7 (×45° clockwise), flip:0|1, count:1..5, x:0..2, y:0..2 }
 set:    { kind:'set', palette:'lines'|'dots', members:[element ids] }
+composite: { kind:'composite', shape, fill, rot:0..7, flip:0|1, parts:[ids from the 'parts' palette] }
+scatter / multi / split: whole-matrix cell kinds, see src/engine/global.js
 ```
 `renderCell(cell, { size = 100, label = '', className = 'cell-svg' })` → SVG string. Pass `label` (use
 `describeCell(cell)` or `puzzle.description.*`) for `role="img"`; without it the SVG is `aria-hidden`.
@@ -55,6 +57,8 @@ Shapes use `currentColor`; hollow fill uses CSS var `--cell-bg` (default white).
 export const PRODUCT_NAME = 'Gridwise';
 export const INDEPENDENCE_NOTICE = '...';   // short, one paragraph, plain text
 export const INTRO_STEPS = [ { title, body /* HTML string, may include <p>, <ul>, <strong> */, example?: { family, difficulty, seed } } ];
+export const LEARN_TABS = [ { id, label } ];           // 'matrices' first; other ids key ITEM_GUIDES and route #/intro/<id>
+export const ITEM_GUIDES = { [tabId]: { title, lead, steps:[{ title, body }], traps, examples:[{ family, difficulty, seed }], practise /* practiceFamily value */ } };
 export const PRACTICE_MODES = { guided: {title, blurb}, untimed: {...}, timed: {...}, review: {...} };
 export const TIMED_PRESETS = [ { id:'twelve', label:'12-minute practice (15 puzzles)', minutes:12, count:15, note:'...' }, ... ];
 export const STATS_CAVEAT = '...';          // small-sample limitation text

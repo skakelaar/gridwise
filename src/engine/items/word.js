@@ -5,7 +5,7 @@ const NAMES = ['Nadia', 'Tomas', 'Priya', 'Lena', 'Omar', 'Yuki', 'Marco', 'Sofi
 
 function finish(rng, ans, wrongs, fmt, question, prompt, steps, hints, rule) {
   const uniq = [];
-  for (const w of wrongs) if (w != null && Number.isFinite(w) && w !== ans && !uniq.includes(w)) uniq.push(w);
+  for (const w of wrongs) if (w != null && Number.isFinite(w) && w > 0 && w !== ans && !uniq.includes(w)) uniq.push(w);
   if (uniq.length < 4) return null;
   const opts = [ans, ...rng.shuffle(uniq).slice(0, 4)];
   const order = rng.shuffle(opts.map((_, i) => i));

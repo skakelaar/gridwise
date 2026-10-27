@@ -125,6 +125,41 @@ discarded a session.
   personalisation starts at level 3, optional practice clock with timeouts logged as mistakes.
 * 304 tests pass; matrix QA sweep over 21 families × 6 levels.
 
+## Composite cells and the Learn guides (added 2026-10-27)
+
+* New `composite` family (figure rules on one axis, mark sets on the other) with its own generator
+  (`src/engine/composite.js`), uniqueness checks on both layers, a rigid-transformation guard shared through
+  `shapes.js`, a two-cluster distractor recipe, and a QA-solver evaluator that reads the figure and the marks
+  independently. Sweep: 200 seeds × 6 levels, 100% agreement, 0 ambiguous, majority-vote probe 0.8%.
+* Learn page split into tabs: the matrices method (now eight steps, the last on two-layer cells) and one guide
+  per non-matrix group with method steps, traps and seeded worked examples rendered from the engine.
+* 328 tests pass; matrix QA sweep over 22 families × 6 levels (27,600 puzzles).
+
+## Logical deduction audit and app-layer fixes (added 2026-10-27)
+
+* `tests/logic.test.js` checks every generated logic item formally: class statements by enumerating all models
+  over a three-element domain, with and without existential import; conditionals by truth table; orderings by
+  permutation. The intended answer must be entailed and no other option may be. The first run found and the
+  generator now prevents: a premise restated as an option; "some C are B" offered beside "some A are C" when
+  both follow; the intermediate consequence offered beside the final one in two-rule chains; ordering items
+  naming a person who never appears in the statements; a malformed superlative ("lightesti").
+* Every logic distractor now carries a note naming the actual slip (denying the antecedent, affirming the
+  consequent, reversed rule, contradicts a premise, not forced), shown as "why this option is tempting".
+* App-layer review fixed: reset not clearing an in-memory challenge or mock test; the practice clock running
+  while the puzzle was off screen; a countdown firing its end callback twice; skipped timed puzzles described
+  as mistakes; a false "every rule group twice" claim; a six-option message on four-option items; blank group
+  labels for non-matrix mistakes; an expired timed drill with no way back to its summary; a dead history entry
+  from the skip link; non-atomic mock finalisation; Enter doing nothing on the last mock question.
+* Item-bank audit (independent reviewer, 6 families × 6 levels × 150 seeds, answers recomputed from the
+  prompts): series, logic, numeric and word arithmetic were mechanically clean. Semantic defects fixed: the
+  "same relation, different first word" analogy distractor was often a second defensible answer (a second unit,
+  collective noun, symptom or workplace), so it is gone and no word of the same relation is ever offered;
+  eleven word-bank pairs corrected or replaced; sentence-completion distractors now respect kin clusters and
+  per-sentence exclusion lists, and five weak sentences were tightened; word problems never offer zero or
+  negative amounts; fraction items show inputs in lowest terms and never two options of equal value; three
+  odd-one-out sets lost a disputable member.
+* 329 tests pass.
+
 ## Not verified
 
 * Real screen-reader output (ARIA roles, labels and live regions were checked in the DOM only).

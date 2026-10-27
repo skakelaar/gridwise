@@ -72,6 +72,12 @@ export const SET_PALETTES = {
       diagA: 'falling diagonal', diagB: 'rising diagonal', dot: 'centre dot',
     },
   },
+  // Small marks attached around a main figure (composite cells). Fixed anchor positions, so they combine like sets.
+  parts: {
+    label: 'attached marks',
+    elements: ['dot', 'ring', 'cross', 'square', 'bar'],
+    names: { dot: 'top-left dot', ring: 'top-right ring', cross: 'bottom-left cross', square: 'bottom-right square', bar: 'bottom bar' },
+  },
   dots: {
     label: 'dot grid',
     elements: ['tl', 'tc', 'tr', 'ml', 'mc', 'mr', 'bl', 'bc', 'br'],
@@ -82,3 +88,22 @@ export const SET_PALETTES = {
     },
   },
 };
+
+// Rigid-transformation guard shared by generators: true when the first two cells of row 3 (or column 3) are a
+// rotation/reflection of row 1 or 2 (column 1 or 2) cell for cell, but applying the same transformation to the
+// third cell would NOT give the intended answer. Such a matrix admits a second "mirrored rows" reading.
+export const RIGID_TRANSFORMS = { flipV: { r: 4, f: 1 }, flipH: { r: 0, f: 1 }, rot180: { r: 4, f: 0 }, rot90: { r: 2, f: 0 }, rot270: { r: 6, f: 0 } };
+export function transformConflict(cells) {
+  const at = (r, c) => cells[r * 3 + c];
+  const canon = (c) => canonicalOrientation(c.shape, c.rot, c.flip);
+  const apply = (g, c) => { const s = compose(g, { r: c.rot, f: c.flip }); return canonicalOrientation(c.shape, s.r, s.f); };
+  const eq = (a, b) => a.r === b.r && a.f === b.f;
+  const target = canon(at(2, 2));
+  for (const g of Object.values(RIGID_TRANSFORMS)) {
+    for (const src of [0, 1]) {
+      if ([0, 1].every((c) => at(src, c).shape === at(2, c).shape && eq(apply(g, at(src, c)), canon(at(2, c)))) && at(src, 2).shape === at(2, 2).shape && !eq(apply(g, at(src, 2)), target)) return true;
+      if ([0, 1].every((r) => at(r, src).shape === at(r, 2).shape && eq(apply(g, at(r, src)), canon(at(r, 2)))) && at(2, src).shape === at(2, 2).shape && !eq(apply(g, at(2, src)), target)) return true;
+    }
+  }
+  return false;
+}

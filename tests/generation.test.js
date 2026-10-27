@@ -51,6 +51,23 @@ for (const family of FAMILY_IDS) {
         } else if (p.kind === 'global') {
           assert.ok(p.features.rule, 'global reading recorded');
           assert.ok(p.cells.every((c) => ['scatter', 'multi', 'split', 'figure'].includes(c.kind)));
+        } else if (p.kind === 'composite') {
+          // Both layers must be uniquely readable: the figure attributes through the attribute grammar …
+          for (const rule of p.rules) {
+            const known = rule.values.map((r) => r.slice());
+            known[2][2] = null;
+            const preds = predictAttribute(p.domains[rule.attr], known);
+            assert.equal(preds.size, 1, `${rule.attr} has one in-grammar prediction`);
+            assert.ok(preds.has(rule.values[2][2]));
+          }
+          // … and the marks through the set grammar.
+          const grid = [[], [], []];
+          p.cells.forEach((c, i) => { grid[Math.floor(i / 3)][i % 3] = c.parts; });
+          grid[2][2] = null;
+          const preds = predictSet('parts', grid);
+          assert.equal(preds.length, 1, 'one in-grammar mark prediction');
+          assert.deepEqual(new Set(preds[0].members), new Set(p.cells[8].parts));
+          for (const c of [...p.cells, ...p.options]) assert.ok(c.kind === 'composite' && c.shape && c.fill && Array.isArray(c.parts), 'well-formed composite cell');
         } else {
           const grid = [[], [], []];
           p.cells.forEach((c, i) => { grid[Math.floor(i / 3)][i % 3] = c.members; });
@@ -85,6 +102,20 @@ for (const family of FAMILY_IDS) {
 test('difficulty follows documented structural features', () => {
   for (const family of FAMILY_IDS) {
     if (FAMILIES[family].kind === 'global') continue;
+    if (FAMILIES[family].kind === 'composite') {
+      for (const seed of seeds.slice(0, 20)) {
+        const p1 = generatePuzzle({ family, difficulty: 1, seed });
+        const p4 = generatePuzzle({ family, difficulty: 4, seed });
+        const p6 = generatePuzzle({ family, difficulty: 6, seed });
+        assert.equal(p1.features.ruleCount, 2, 'level 1: rotation plus marks');
+        assert.equal(p1.features.figureAxis, 'row');
+        assert.ok(['add', 'union'].includes(p1.features.op));
+        assert.ok(p4.features.ruleCount >= 3, 'level 4: at least two figure rules plus marks');
+        assert.ok(p6.features.ruleCount >= 4, 'level 6: at least three figure rules plus marks');
+        assert.ok(['intersection', 'xor', 'neither'].includes(p6.features.op));
+      }
+      continue;
+    }
     if (FAMILIES[family].kind === 'set') {
       for (const seed of seeds.slice(0, 20)) {
         const p1 = generatePuzzle({ family, difficulty: 1, seed });

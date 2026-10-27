@@ -3,7 +3,7 @@
 import { renderCell, renderMatrixPreview } from '../render/svg.js';
 import { FAMILY_IDS, FAMILIES, GROUPS, DIFFICULTY_LABELS, ITEM_FAMILY_IDS, ITEM_FAMILIES, ITEM_GROUPS, ALL_GROUPS, familyInfo, markupToHtml } from '../engine/index.js';
 import {
-  PRODUCT_NAME, INDEPENDENCE_NOTICE, INTRO_STEPS, PRACTICE_MODES, TIMED_PRESETS,
+  PRODUCT_NAME, INDEPENDENCE_NOTICE, INTRO_STEPS, LEARN_TABS, ITEM_GUIDES, PRACTICE_MODES, TIMED_PRESETS,
   STATS_CAVEAT, PERSONALISATION_NOTE, LIMITATIONS, CHALLENGE_NOTE,
 } from './content.js';
 import { CHALLENGE_FORMATS, assessmentText } from './challenge.js';
@@ -105,7 +105,7 @@ export function difficultySelect({ id, value, onChange }) {
 
 export function renderHome({ samplePuzzle }) {
   const cards = [
-    { href: '#/intro', title: 'Learn', blurb: 'A short, skimmable introduction to reading rows, columns and rules, with worked examples.' },
+    { href: '#/intro', title: 'Learn', blurb: 'Short guides with worked examples: reading matrices, then number series, logic, arithmetic, verbal items and word problems.' },
     { href: '#/practice', title: 'Practise', blurb: 'Any question type, any of six levels, at your own pace. Hints on or off; a full explanation after every answer.' },
     { href: '#/test', title: 'Test', blurb: 'Three formats: a mock test on one clock, an adaptive challenge that steps up and down with you, or a quick timed drill.' },
     { href: '#/results', title: 'Results', blurb: 'Progress by rule group and level, your mistakes to retry, and every past test report.' },
@@ -114,7 +114,7 @@ export function renderHome({ samplePuzzle }) {
     h('div', { class: 'hero' },
       h('div', { class: 'hero-text' },
         screenTitle(PRODUCT_NAME),
-        h('p', { class: 'pitch' }, 'Practise 3×3 abstract matrix puzzles and learn the rule behind every answer, with an explanation after each one.'),
+        h('p', { class: 'pitch' }, 'Practise abstract matrix puzzles, and the number, logic, arithmetic and verbal questions that sit beside them in aptitude tests, with the rule behind every answer explained.'),
         h('p', { class: 'notice', id: 'independence-notice' }, INDEPENDENCE_NOTICE),
         h('div', { class: 'hero-actions' },
           link('#/practice', 'Start practising', 'btn btn-primary btn-lg'),
@@ -137,10 +137,18 @@ export function renderHome({ samplePuzzle }) {
 
 // ---------------------------------------------------------------- intro
 
+export function learnTabs(current) {
+  return h('nav', { class: 'tabs', 'aria-label': 'Learn sections' },
+    LEARN_TABS.map((t) => h('a', { href: t.id === 'matrices' ? '#/intro' : `#/intro/${t.id}`, class: `tab${t.id === current ? ' is-current' : ''}`, 'aria-current': t.id === current ? 'page' : null }, t.label)),
+  );
+}
+
+/** Matrices tab: the numbered method steps, each with a generated example. */
 export function renderIntro({ examples }) {
   return h('section', { class: 'screen intro' },
-    screenTitle('Learn the basics'),
-    h('p', { class: 'lead' }, 'Each puzzle is a 3×3 grid. One or more rules run across the rows and down the columns; the bottom-right cell is missing and one of six options completes it.'),
+    screenTitle('Learn'),
+    learnTabs('matrices'),
+    h('p', { class: 'lead' }, 'Each matrix puzzle is a 3×3 grid. One or more rules run across the rows, down the columns or over the whole grid; the bottom-right cell is missing and one of six options completes it. Eight habits cover almost every puzzle.'),
     h('ol', { class: 'intro-steps' },
       INTRO_STEPS.map((step, i) => h('li', { class: 'intro-step' },
         h('div', { class: 'intro-text' },
@@ -155,7 +163,50 @@ export function renderIntro({ examples }) {
     ),
     h('div', { class: 'actions' },
       link('#/practice', 'Start practising', 'btn btn-primary'),
-      link('#/', 'Back to home', 'btn'),
+      link('#/intro/series', 'Next: number series', 'btn'),
+    ),
+  );
+}
+
+/** A worked non-matrix example: question, prompt, options with the answer marked, and the explanation. */
+function itemExample(item) {
+  return h('figure', { class: 'intro-item' },
+    h('p', { class: 'intro-item-question' }, `${item.question} `, h('span', { class: 'tag' }, `${item.familyLabel}, ${item.difficultyLabel.toLowerCase()}`)),
+    renderPrompt(item),
+    h('ol', { class: 'intro-item-options', 'aria-label': 'Options' },
+      item.options.map((o, i) => h('li', { class: i === item.correctIndex ? 'is-answer' : null },
+        h('span', { class: 'option-num', 'aria-hidden': 'true' }, String(i + 1)),
+        h('span', { html: markupToHtml(o) }),
+        i === item.correctIndex ? h('span', { class: 'visually-hidden' }, ' (correct)') : null,
+      )),
+    ),
+    h('figcaption', { class: 'intro-item-why' },
+      h('strong', null, `Answer: option ${item.correctIndex + 1}. `),
+      item.explanation.summary ? `${item.explanation.summary} ` : '',
+      (item.explanation.steps || []).join(' '),
+    ),
+  );
+}
+
+/** One non-matrix guide tab: lead, method steps, traps, worked examples, and a button that sets Practise to it. */
+export function renderItemGuide({ tab, guide, examples }, { onPractise }) {
+  const next = LEARN_TABS[(LEARN_TABS.findIndex((t) => t.id === tab) + 1) % LEARN_TABS.length];
+  return h('section', { class: 'screen intro' },
+    screenTitle('Learn'),
+    learnTabs(tab),
+    h('h2', { class: 'intro-guide-title' }, guide.title),
+    h('p', { class: 'lead' }, guide.lead),
+    h('ol', { class: 'intro-steps' },
+      guide.steps.map((step) => h('li', { class: 'intro-step is-text' },
+        h('div', { class: 'intro-text' }, h('h3', null, step.title), h('div', { class: 'intro-body', html: step.body })),
+      )),
+    ),
+    h('p', { class: 'intro-traps' }, h('strong', null, 'Common traps: '), guide.traps),
+    h('h3', null, 'Worked examples'),
+    h('div', { class: 'intro-item-grid' }, examples.filter(Boolean).map(itemExample)),
+    h('div', { class: 'actions' },
+      h('button', { type: 'button', class: 'btn btn-primary', onClick: () => onPractise(guide.practise) }, `Practise ${guide.title.toLowerCase()}`),
+      link(next.id === 'matrices' ? '#/intro' : `#/intro/${next.id}`, `Next: ${next.label.toLowerCase()}`, 'btn'),
     ),
   );
 }
@@ -379,7 +430,9 @@ function feedbackPanel(model, handlers) {
     line = `The correct answer is option ${correctNo}.`;
   } else if (answered && answered.chosenIndex == null) {
     title = answered.timedOut ? 'Time ran out' : 'Not answered';
-    line = `You did not answer in time; it counts as a mistake. The correct answer is option ${correctNo}.`;
+    line = answered.timedOut
+      ? `You did not answer in time; it counts as a mistake. The correct answer is option ${correctNo}.`
+      : `You did not answer this puzzle, so it is not counted. The correct answer is option ${correctNo}.`;
   } else if (answered?.correct) {
     title = 'Correct';
     cls += ' is-correct';
@@ -568,7 +621,7 @@ export function renderReportsList({ challenges, mocks }) {
 
 // ---------------------------------------------------------------- timed setup and summary
 
-export function renderTimedSetup({ settings, resumable }, handlers) {
+export function renderTimedSetup({ settings, resumable, lastFinished = null }, handlers) {
   const state = { count: settings.timedCount, minutes: settings.timedMinutes, family: settings.timedFamily, difficulty: settings.timedDifficulty };
   const countInput = h('input', { type: 'number', id: 'timed-count', class: 'input', min: '5', max: '40', step: '1', value: String(state.count), required: true, inputmode: 'numeric' });
   const minInput = h('input', { type: 'number', id: 'timed-minutes', class: 'input', min: '1', max: '60', step: '1', value: String(state.minutes), required: true, inputmode: 'numeric' });
@@ -611,6 +664,10 @@ export function renderTimedSetup({ settings, resumable }, handlers) {
     h('h2', null, 'Timed drill'),
     h('p', { class: 'lead' }, 'Answer as many puzzles as you can before the clock runs out. Feedback and explanations are shown in the summary at the end; unanswered puzzles count as unanswered, not as wrong.'),
   );
+  if (!resumable && lastFinished) {
+    const done = lastFinished.items.filter((i) => i.chosenIndex != null).length;
+    screen.appendChild(h('p', { class: 'note' }, `Your last timed session ended${lastFinished.endedBy === 'time' ? ' when the clock ran out' : ''} (${done} of ${lastFinished.items.length} answered). `, h('a', { href: '#/timed/summary' }, 'View its summary')));
+  }
   if (resumable) {
     screen.appendChild(h('div', { class: 'banner', role: 'region', 'aria-label': 'Unfinished session' },
       h('p', null, h('strong', null, 'You have an unfinished timed session. '), `${resumable.index} of ${resumable.count} puzzles done.`),
@@ -686,11 +743,11 @@ export function renderReviewList({ mistakes, embedded = false }, handlers) {
     mistakes.map((m) => h('li', { class: 'mistake' },
       h('div', { class: 'mistake-text' },
         h('span', { class: 'mistake-title' }, `${familyInfo(m.family)?.label || m.family} · Level ${m.difficulty} (${DIFFICULTY_LABELS[m.difficulty] || ''})`),
-        h('span', { class: 'mistake-meta' }, `${formatDate(m.at)} · ${GROUPS[m.group]?.label || ''}`),
+        h('span', { class: 'mistake-meta' }, `${formatDate(m.at)} · ${ALL_GROUPS[m.group]?.label || ''}`),
       ),
       h('div', { class: 'mistake-actions' },
-        h('a', { class: 'btn btn-primary btn-small', href: `#/review/${encodeURIComponent(m.puzzleId)}` }, 'Retry', h('span', { class: 'visually-hidden' }, ` ${FAMILIES[m.family]?.label || m.family} from ${formatDate(m.at)}`)),
-        h('button', { type: 'button', class: 'btn btn-small', onClick: () => handlers.onUnderstood(m.puzzleId) }, 'Mark as understood', h('span', { class: 'visually-hidden' }, ` ${FAMILIES[m.family]?.label || m.family} from ${formatDate(m.at)}`)),
+        h('a', { class: 'btn btn-primary btn-small', href: `#/review/${encodeURIComponent(m.puzzleId)}` }, 'Retry', h('span', { class: 'visually-hidden' }, ` ${familyInfo(m.family)?.label || m.family} from ${formatDate(m.at)}`)),
+        h('button', { type: 'button', class: 'btn btn-small', onClick: () => handlers.onUnderstood(m.puzzleId) }, 'Mark as understood', h('span', { class: 'visually-hidden' }, ` ${familyInfo(m.family)?.label || m.family} from ${formatDate(m.at)}`)),
       ),
     )),
   ));
@@ -759,11 +816,11 @@ export function renderSettings({ settings, adaptive, storageOk, confirming }, ha
     h('section', { class: 'settings-block', 'aria-labelledby': 'storage-title' },
       h('h2', { id: 'storage-title' }, 'Local data'),
       h('p', { class: 'note' }, storageOk
-        ? 'Attempts, mistakes, settings and any unfinished timed session are stored in this browser only (localStorage keys starting with “mrt.”). No data leaves your browser.'
+        ? 'Attempts, mistakes, settings and any unfinished timed session, challenge or mock test are stored in this browser only (localStorage keys starting with “mrt.”). No data leaves your browser.'
         : 'Browser storage is unavailable, so nothing persists between page loads. The app still works for this visit.'),
       confirming
         ? h('div', { class: 'banner banner-danger', role: 'region', 'aria-label': 'Confirm reset' },
-          h('p', null, h('strong', null, 'Delete all local data? '), 'This clears your attempt history, mistakes, settings and any unfinished timed session. It cannot be undone.'),
+          h('p', null, h('strong', null, 'Delete all local data? '), 'This clears your attempt history, mistakes, settings, past reports and any unfinished timed session, challenge or mock test. It cannot be undone.'),
           h('div', { class: 'actions' },
             h('button', { type: 'button', class: 'btn btn-danger', id: 'reset-confirm', onClick: handlers.onResetConfirm }, 'Yes, delete everything'),
             h('button', { type: 'button', class: 'btn', onClick: handlers.onResetCancel }, 'Cancel'),
@@ -782,7 +839,7 @@ export function renderAbout() {
     screenTitle('About'),
     h('p', { class: 'notice' }, INDEPENDENCE_NOTICE),
     h('h2', null, 'How it works'),
-    h('p', null, 'Every puzzle is generated in your browser from a rule specification and a seed, then checked so that exactly one option follows the rule. Explanations, hints and the “why this option is tempting” notes come from the same specification.'),
+    h('p', null, 'Every matrix puzzle is generated in your browser from a rule specification and a seed, then checked by two independent solvers so that exactly one option follows the rule. Number series, logic, arithmetic, verbal and word-problem items are generated from templates and a curated word bank and checked for a single correct option. Explanations, hints and the “why this option is tempting” notes come from the same specification, so they cannot disagree with the question.'),
     h('h2', null, 'Privacy'),
     h('p', null, 'No data leaves your browser. There are no accounts, no analytics and no network requests after the page loads. Your attempt history is kept in this browser’s local storage and can be cleared from Settings.'),
     h('h2', null, 'Limitations'),

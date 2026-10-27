@@ -16,7 +16,7 @@ export const CHALLENGE = {
 const STAIRCASE = 'You start at level 3. Each correct answer moves the next question one level up (to a maximum of 6, Grandmaster); each incorrect answer or timeout moves it one level down (to a minimum of 1).';
 
 export const CHALLENGE_FORMATS = {
-  matrix: { id: 'matrix', label: '12 matrices in 12 minutes', count: 12, seconds: 60, blurb: 'Every rule group twice, 60 seconds per puzzle.', rule: `${STAIRCASE} Every puzzle has its own 60-second clock, so the whole challenge lasts at most 12 minutes.` },
+  matrix: { id: 'matrix', label: '12 matrices in 12 minutes', count: 12, seconds: 60, blurb: 'All seven rule groups, whole-matrix patterns weighted double, 60 seconds per puzzle.', rule: `${STAIRCASE} Every puzzle has its own 60-second clock, so the whole challenge lasts at most 12 minutes.` },
   mixed: { id: 'mixed', label: '16 mixed questions in 8 minutes', count: 16, seconds: 30, blurb: 'Eight matrices plus number series, logical deduction, fractions and arithmetic, and verbal analogies, 30 seconds each.', rule: `${STAIRCASE} Every question has its own 30-second clock, so the whole challenge lasts at most 8 minutes.` },
 };
 export const CHALLENGE_RULE = CHALLENGE_FORMATS.matrix.rule;

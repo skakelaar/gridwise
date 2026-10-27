@@ -55,7 +55,8 @@ Puzzle logic never touches the DOM; the app layer only calls `generatePuzzle` an
 
 Six matrix families run over the whole matrix rather than along rows and columns: snake and spiral counts,
 "three of each" divided boxes, a fixed set hidden in noise, column sets, count-plus-composition, and mirrored
-rows. Applied word problems (journeys, reverse percentages, clock hands, work rates, averages, ages) and
+rows. A seventh, "Figure with marks", puts two layers in one cell: a figure that turns, flips or changes fill
+along one axis while small marks around it combine by a set operation along the other. Applied word problems (journeys, reverse percentages, clock hands, work rates, averages, ages) and
 sentence completion join the non-matrix bank. See `docs/RULES.md`.
 
 ## Other question types
@@ -92,7 +93,8 @@ forms between levels 5 and 6.
 
 ## Sections
 
-Five sections: **Learn** (the intro), **Practise** (any question type and level, hints on or off),
+Five sections: **Learn** (a matrices method in eight steps, then a guide tab with worked examples for each
+other question type), **Practise** (any question type and level, hints on or off),
 **Test** (mock test, adaptive challenge or timed drill behind one switcher), **Results** (progress, mistakes,
 past reports) and **Settings**. Older routes (`#/guided`, `#/review`, `#/progress`) redirect.
 See `docs/RULES.md` for the exact definitions.

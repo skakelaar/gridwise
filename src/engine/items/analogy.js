@@ -8,8 +8,6 @@ function buildReversed(rel, pairs, p1, p2, level, rng, ok) {
   const [, a1, b1] = p1;
   const [, c, d] = p2;
   const distractors = [];
-  const sameRel = rng.shuffle(rel.pairs.filter((p) => p !== p1 && p !== p2).map((p) => p[1]).filter(ok));
-  if (sameRel.length) distractors.push({ w: sameRel[0], code: 'same-relation-wrong-pair', text: 'has the right kind of relationship but belongs with a different word' });
   const others = rng.shuffle(RELATIONS.filter((x) => x.id !== rel.id));
   for (const o of others) {
     if (distractors.length >= 4) break;
@@ -50,13 +48,13 @@ export function buildAnalogy(difficulty, rng) {
   const p1 = rng.pick(pairs.filter((p) => p !== p2));
   const [, a1, b1] = p1;
   const [, c, d] = p2;
+  // Words that are the second (or first) member of ANY pair in the same relation are never offered: another
+  // word of the same kind (a second unit, a second collective noun) is too often a defensible answer as well.
+  const sameKind = new Set(rel.pairs.flatMap((p) => [p[1], p[2]]));
   const forbidden = new Set([d, c, a1, b1]);
-  const ok = (w) => !forbidden.has(w) && !PAIRED.has(`${c}|${w}`) && !PAIRED.has(`${w}|${d}`);
+  const ok = (w) => !forbidden.has(w) && !sameKind.has(w) && !PAIRED.has(`${c}|${w}`) && !PAIRED.has(`${w}|${d}`);
   if (reversed) return buildReversed(rel, pairs, p1, p2, level, rng, ok);
   const distractors = [];
-  // one tempting same-relation word that belongs with a different first word
-  const sameRel = rng.shuffle(rel.pairs.filter((p) => p !== p1 && p !== p2).map((p) => p[2]).filter(ok));
-  if (sameRel.length) distractors.push({ w: sameRel[0], code: 'same-relation-wrong-pair', text: 'has the right kind of relationship but belongs with a different first word' });
   // words from other relations, close to the level so vocabulary difficulty does not give the answer away
   const others = rng.shuffle(RELATIONS.filter((x) => x.id !== rel.id));
   for (const o of others) {

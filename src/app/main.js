@@ -1,7 +1,7 @@
 // Entry point: hash router and controllers. Wires session state (session.js), persistence (storage.js)
 // and rendering (ui.js) together. Puzzle logic never lives here; the engine is only asked to generate.
-import { generatePuzzle } from '../engine/index.js';
-import { INTRO_STEPS, PRODUCT_NAME } from './content.js';
+import { generatePuzzle, generateAny } from '../engine/index.js';
+import { INTRO_STEPS, ITEM_GUIDES, PRODUCT_NAME } from './content.js';
 import * as storage from './storage.js';
 import * as session from './session.js';
 import * as ui from './ui.js';
@@ -116,12 +116,26 @@ function showHome() {
   mount(ui.renderHome({ samplePuzzle }), { title: 'Home' });
 }
 
-function showIntro() {
+function showIntro(parts) {
+  const tab = parts[0] || 'matrices';
+  if (tab !== 'matrices') {
+    const guide = ITEM_GUIDES[tab];
+    if (!guide) { navigate('#/intro', { replace: true }); return; }
+    const examples = guide.examples.map((spec) => { try { return generateAny(spec); } catch { return null; } });
+    const onPractise = (family) => {
+      storage.saveSettings({ practiceFamily: family, practiceHints: true, practiceClock: 'off' });
+      practiceSessions.guided = null; practiceSessions.untimed = null;
+      navigate('#/practice');
+      ui.announce(`Practice set to ${guide.title.toLowerCase()} with hints on.`);
+    };
+    mount(ui.renderItemGuide({ tab, guide, examples }, { onPractise }), { title: `Learn – ${guide.title}` });
+    return;
+  }
   const examples = INTRO_STEPS.map((step) => {
     if (!step.example) return null;
     try { return generatePuzzle(step.example); } catch { return null; }
   });
-  mount(ui.renderIntro({ examples }), { title: 'Learn the basics' });
+  mount(ui.renderIntro({ examples }), { title: 'Learn – matrices' });
 }
 
 function showAbout() {
@@ -225,7 +239,8 @@ function renderPractice(mode, s, { focus } = {}) {
   };
   mount(ui.renderPuzzleScreen(model, handlers), { title: model.heading, focusTitle: focus === 'title' });
   if (clockOn) {
-    if (!s.deadline) s.deadline = s.startedAt + clockSecs * 1000;
+    // The clock only runs while the puzzle is on screen: leaving the screen stores the remaining time.
+    if (!s.deadline) s.deadline = Date.now() + (s.remainingMs ?? clockSecs * 1000);
     const clock = document.getElementById('countdown');
     const countdown = createCountdown({
       endsAt: s.deadline,
@@ -244,7 +259,11 @@ function renderPractice(mode, s, { focus } = {}) {
       },
     }).start();
     const prev = teardown;
-    teardown = () => { countdown.stop(); if (prev) prev(); };
+    teardown = () => {
+      countdown.stop();
+      if (!s.answered && !s.revealed) { s.remainingMs = Math.max(0, s.deadline - Date.now()); s.deadline = null; }
+      if (prev) prev();
+    };
   }
   if (focus === 'feedback') ui.focusEl(document.getElementById('feedback-title'));
   if (focus === 'hint') ui.focusEl(document.getElementById('hint-btn') || document.getElementById('reveal-btn'));
@@ -282,9 +301,10 @@ function showTimed(parts) {
     session.finishTimed(existing, 'time', existing.endsAt);
     persistTimed();
   }
+  const lastFinished = existing && existing.finished ? existing : null;
   const settings = storage.loadSettings();
   storage.saveSettings({ testFormat: 'timed' });
-  mount(ui.renderTimedSetup({ settings, resumable }, {
+  mount(ui.renderTimedSetup({ settings, resumable, lastFinished }, {
     onStart: ({ count, minutes, family, difficulty }) => {
       storage.saveSettings({ timedCount: count, timedMinutes: minutes, timedFamily: family, timedDifficulty: difficulty });
       timed = session.createTimedSession({ count, minutes, filter: family, difficulty });
@@ -331,7 +351,7 @@ function renderTimedPuzzle(t, { focus } = {}) {
     onSubmit: () => {
       if (selected == null) {
         const msg = app.querySelector('.submit-msg');
-        if (msg) msg.textContent = 'Choose one of the six options first, or skip.';
+        if (msg) msg.textContent = `Choose one of the ${puzzle.options.length} options first, or skip.`;
         document.getElementById('opt-0')?.focus();
         return;
       }
@@ -388,7 +408,7 @@ function showTimedReview(index) {
     puzzle,
     mode: 'summary',
     heading: `Review puzzle ${index + 1} of ${t.items.length}`,
-    answered: { chosenIndex: item.chosenIndex, correct: item.correct, ms: item.ms },
+    answered: { chosenIndex: item.chosenIndex, correct: item.correct, ms: item.ms, skipped: item.chosenIndex == null },
     revealed: false,
     selected: null,
     showHints: false,
@@ -514,7 +534,7 @@ function showChallengeReport(id) {
     c = id ? storage.findChallenge(id) : hist[hist.length - 1];
   }
   if (!c) return mount(ui.renderError('No challenge report found. Start a challenge to get one.'), { title: 'Challenge report' });
-  const puzzles = c.items.map((item) => (item.difficulty == null ? null : session.puzzleFor(item)));
+  const puzzles = c.items.map((item) => (item.difficulty == null ? null : safePuzzle(item)));
   mount(ui.renderChallengeReport({ challenge: c, report: challenge.challengeReport(c), puzzles }), { title: 'Challenge report' });
 }
 
@@ -536,15 +556,23 @@ function settleMock(m) {
 
 function finaliseMock(m) {
   if (!m._logged) {
+    // Mark as logged before writing attempts, so a failure part-way can never log the same test twice.
+    m._logged = true;
+    storage.saveMock(m);
     for (const attempt of mock.mockAttempts(m, m.finishedAt || Date.now())) {
       const item = m.items.find((i) => i.seed === attempt.seed && i.family === attempt.family);
-      recordAttempt(session.puzzleFor(item), attempt);
+      const puzzle = safePuzzle(item);
+      if (puzzle) recordAttempt(puzzle, attempt);
     }
-    m._logged = true;
   }
   storage.archiveMock(m);
   storage.clearMock();
   mockState = null;
+}
+
+/** Regenerate a stored item from its seed; null (rather than a crash) when the engine no longer produces it. */
+function safePuzzle(item) {
+  try { return item ? session.puzzleFor(item) : null; } catch (err) { console.error(err); return null; }
 }
 
 function showMock(parts) {
@@ -588,7 +616,10 @@ function renderMockQuestion(m, { focus } = {}) {
   const goTo = (i) => { mock.mockGoTo(m, i); persistMock(); renderMockQuestion(m, { focus: 'title' }); ui.announce(`Question ${m.index + 1} of ${m.items.length}.`); };
   const handlers = {
     onSelect: (i) => { mock.mockAnswer(m, i); persistMock(); ui.setSelectedOption(app, i); },
-    onSubmit: () => { if (m.index < m.items.length - 1) goTo(m.index + 1); },
+    onSubmit: () => {
+      if (m.index < m.items.length - 1) goTo(m.index + 1);
+      else { document.getElementById('finish-btn')?.focus(); ui.announce('This is the last question. Press Finish to end the test, or go back to a saved question.'); }
+    },
     onNext: () => goTo(m.index + 1),
     onPrev: () => goTo(m.index - 1),
     onJump: (i) => goTo(i),
@@ -636,7 +667,7 @@ function showMockReport(id) {
     m = id ? storage.findMock(id) : hist[hist.length - 1];
   }
   if (!m) return mount(ui.renderError('No mock test report found. Start a mock test to get one.'), { title: 'Mock test report' });
-  const puzzles = m.items.map((item) => session.puzzleFor(item));
+  const puzzles = m.items.map((item) => safePuzzle(item));
   mount(ui.renderChallengeReport({ challenge: m, report: challenge.challengeReport(m), puzzles }), { title: 'Mock test report' });
 }
 
@@ -736,6 +767,8 @@ function showSettings() {
       onResetConfirm: () => {
         storage.clearAll();
         timed = null;
+        chal = null;
+        mockState = null;
         practiceSessions.guided = null;
         practiceSessions.untimed = null;
         confirming = false;
@@ -763,5 +796,10 @@ function onHashChange() {
   route();
 }
 window.addEventListener('hashchange', onHashChange);
+document.querySelector('.skip-link')?.addEventListener('click', (e) => {
+  e.preventDefault();
+  const target = document.getElementById('app');
+  if (target) { target.setAttribute('tabindex', '-1'); target.focus(); }
+});
 if (!location.hash || !location.hash.startsWith('#/')) history.replaceState(null, '', '#/');
 route();

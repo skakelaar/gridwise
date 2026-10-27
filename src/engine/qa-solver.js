@@ -359,6 +359,30 @@ function evaluateGlobalOption(cells, option) {
   return { attrs: { global: pats }, level: pats.some((p) => p.strong) ? 'strong' : pats.length ? 'weak' : 'none', score: [pats.some((p) => p.strong) ? 1 : 0, pats.length ? 1 : 0, pats.length] };
 }
 
+// Composite cells: the main figure is read like a figure cell (shape, fill, orientation; everything else constant)
+// and the attached marks like a set cell. An option is consistent only when both layers are.
+function evaluateCompositeOption(cells, option) {
+  const toFig = (c) => ({ kind: 'figure', shape: c.shape, fill: c.fill, rot: c.rot, flip: c.flip, size: 'medium', count: 1, x: 1, y: 1, inner: 'none', innerFill: 'none' });
+  const fig = evaluateFigureOption(cells.slice(0, 8).map(toFig), toFig(option));
+  const known = cells.slice(0, 8).map((c) => c.parts);
+  const elements = [...new Set([...known, option.parts].flat())];
+  const pats = setPatterns(completedGrid(known, option.parts), elements);
+  // Cross-layer reading: the marks are a fixed function of one figure attribute with 2–3 values, the link being
+  // fixed by the eight visible cells and the gap's attribute value already seen.
+  const partsKey = (c) => c.parts.slice().sort().join(',');
+  for (const attr of ['shape', 'fill', 'rot', 'flip']) {
+    const src = (c) => { if (attr === 'rot' || attr === 'flip') { const o = canonicalOrientation(c.shape, c.rot, c.flip); return attr === 'rot' ? o.r : o.f; } return c[attr]; };
+    const values = new Set(cells.slice(0, 8).map(src));
+    if (values.size < 2 || values.size > 3) continue;
+    const m = new Map(); let ok = true;
+    for (const c of cells.slice(0, 8)) { const k = src(c); if (m.has(k) && m.get(k) !== partsKey(c)) { ok = false; break; } m.set(k, partsKey(c)); }
+    if (ok && m.has(src(option)) && m.get(src(option)) === partsKey(option)) pats.push({ name: `coupled:${attr}`, strong: true });
+  }
+  const setStrong = pats.some((p) => p.strong);
+  const level = fig.level === 'strong' && setStrong ? 'strong' : fig.level !== 'none' && pats.length ? 'weak' : 'none';
+  return { attrs: { ...fig.attrs, marks: pats }, level, score: [fig.score[0] + (setStrong ? 1 : 0), fig.score[1] + (pats.length ? 1 : 0), fig.score[2] + pats.length] };
+}
+
 function evaluateSetOption(cells, option) {
   const elements = [...new Set([...cells.slice(0, 8), option].flatMap((c) => c.members))];
   const grid = completedGrid(cells.slice(0, 8).map((c) => c.members), option.members);
@@ -397,7 +421,7 @@ export function solveIndependently(puzzle) {
   const options = puzzle.options;
   const kind = options[0].kind;
   const isGlobal = ['scatter', 'multi', 'split'].includes(kind);
-  const evals = options.map((o) => (isGlobal ? evaluateGlobalOption(cells, o) : kind === 'set' ? evaluateSetOption(cells, o) : evaluateFigureOption(cells, o)));
+  const evals = options.map((o) => (isGlobal ? evaluateGlobalOption(cells, o) : kind === 'set' ? evaluateSetOption(cells, o) : kind === 'composite' ? evaluateCompositeOption(cells, o) : evaluateFigureOption(cells, o)));
 
   const idx = (level) => evals.map((e, i) => (e.level === level ? i : -1)).filter((i) => i >= 0);
   let candidates = idx('strong');

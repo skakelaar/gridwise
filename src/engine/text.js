@@ -46,6 +46,15 @@ export function listNames(items) {
 // Short spoken description of a cell, e.g. "2 medium striped flags, rotated 90° clockwise".
 export function describeCell(cell) {
   if (cell.kind === 'scatter' || cell.kind === 'multi' || cell.kind === 'split') return describeGlobalCell(cell);
+  if (cell.kind === 'composite') {
+    const shape = SHAPES[cell.shape];
+    const o = [];
+    if (cell.flip && shape.mirror === null) o.push('mirrored');
+    if (cell.rot) o.push(`rotated ${cell.rot * 45}° clockwise`);
+    const fig = `a ${valueName('fill', cell.fill)} ${shape.label}${o.length ? `, ${o.join(', ')},` : ''}`;
+    const marks = cell.parts.length ? `with ${listNames(cell.parts.map((m) => SET_PALETTES.parts.names[m]))}` : 'with no marks';
+    return `${fig} ${marks}`.replace(',, ', ', ');
+  }
   if (cell.kind === 'set') {
     const pal = SET_PALETTES[cell.palette];
     if (cell.members.length === 0) return 'empty cell';
