@@ -1,5 +1,6 @@
 // Entry point: hash router and controllers. Wires session state (session.js), persistence (storage.js)
 // and rendering (ui.js) together. Puzzle logic never lives here; the engine is only asked to generate.
+import { parseHash as parseRouteHash } from './routes.js';
 import { generatePuzzle, generateAny } from '../engine/index.js';
 import { INTRO_STEPS, ITEM_GUIDES, PRODUCT_NAME } from './content.js';
 import * as storage from './storage.js';
@@ -17,12 +18,7 @@ const nav = document.querySelector('.site-nav');
 
 let lastRouteHash = '#/';
 
-function parseHash() {
-  const raw = location.hash.replace(/^#\/?/, '');
-  const [pathPart] = raw.split('?');
-  const parts = pathPart.split('/').filter(Boolean).map(decodeURIComponent);
-  return parts;
-}
+const parseHash = () => parseRouteHash(location.hash);
 
 function navigate(hash, { replace = false } = {}) {
   if (replace) history.replaceState(null, '', hash);
