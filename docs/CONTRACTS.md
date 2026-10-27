@@ -13,22 +13,23 @@ import { renderCell, renderMatrixPreview } from './src/render/svg.js';
 const puzzle = generatePuzzle({ family: 'rotation', difficulty: 2, seed: 'abc123' });
 ```
 
-`FAMILY_IDS`: rotation, reflection, number, size, position, fill, alternation, cyclic, addition,
-subtraction, union, intersection, xor, combination.  `FAMILIES[id]` = `{ group, label, kind:'figure'|'set', ... }`.
-`GROUPS[group].label` gives the six user-facing rule groups (orientation, change, sequence, arithmetic, set, combination).
-`DIFFICULTY_LABELS` = `{1:'Basic', 2:'Intermediate', 3:'Advanced'}`.
+`FAMILY_IDS` contains 23 matrix families (see `src/engine/families.js` and `listFamilies()`),
+including figure, set, composite and whole-matrix families. `GROUPS` contains seven rule groups.
+`DIFFICULTY_LABELS` maps 1–6 to Basic, Intermediate, Advanced, Expert, Master and Grandmaster.
+`generateAny(spec)` additionally dispatches six item families: series, logic, numeric, analogy, vocab, word.
+
 
 ### Puzzle object
 ```
 id, seed, family, familyLabel, group, groupLabel, difficulty, difficultyLabel, attempt
-kind            'figure' | 'set'
+kind            'figure' | 'set' | 'composite' | 'global' (generateAny also returns 'item')
 cells[9]        cell objects, row-major; cells[8] is the hidden answer (never render it in the matrix)
 options[6]      cell objects (answer choices, already shuffled deterministically)
 correctIndex    0..5
 distractors[6]  null at correctIndex; otherwise { index, code, text, attrs } — text is the misconception
                  phrased as a predicate, e.g. "copies the cell to the left of the gap"
 rules[]         (figure) [{ attr, type, params, values[3][3], label }]; type 'const' = unchanged attribute
-setRule         (set) { op, orientation:'row'|'col', palette:'lines'|'dots', opLabel }
+setRule         (set) { op, orientation:'row'|'col', palette:'lines'|'dots', opLabel, colOp?, framing? }
 explanation     { summary, rows[], columns[], missing[], unchanged }  — plain sentences
 hints[]         3+ progressively more specific hints; the last one states the rule but not the answer
 description     { matrix: string, cells[9]: string, options[6]: string } — accessible text
@@ -68,7 +69,7 @@ export const LIMITATIONS = [ '...', '...' ]; // bullet strings
 
 ### `src/app/storage.js`, `src/app/session.js`, `src/app/ui.js`, `src/app/main.js`, `index.html`, `css/styles.css`
 Owner: frontend packet. localStorage key prefix `mrt.`. Puzzle logic never lives in the app layer: the app only
-calls `generatePuzzle` and `renderCell`.
+calls `generateAny`/`generatePuzzle` and the render layer.
 
 ### Adaptive practice (transparent heuristic, labelled "practice personalisation")
 Default off. When on: pick the next family with probability proportional to (1 + recent mistakes in that family),

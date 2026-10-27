@@ -47,7 +47,7 @@ Each attribute of a figure puzzle follows exactly one of these rules:
 | rowSum / colSum | (number of shapes, level 3+) the third cell of each row / column holds the first count plus the second |
 | rowDiff / colDiff | (number of shapes, level 3+) the third cell holds the first count minus the second |
 
-Rules on different attributes are independent and are simply superimposed. Progressions are only used on
+Most rules on different attributes are superimposed independently; coupled rules explicitly link two attributes. Progressions are only used on
 ordered attributes (size, number, position, rotation); categorical attributes (shape, fill, reflection, inner
 shape, inner fill) use latin, alternation or const. Number and position rules are never combined in one puzzle
 (the copies of a figure use a fixed layout), and inner shapes only appear in single, hollow outer figures, so
@@ -97,10 +97,16 @@ population, does not estimate IQ or percentiles, and is not comparable with any 
 | 3 Advanced | core rule + 2 independent rules; rotation steps up to 135°; count arithmetic and inner shapes enter the pool | 3 rules, the first of which is a two-direction rule (grid or latin) | "dots" palette (9 elements), sets of 3–5, rows or columns |
 | 4 Expert | core rule + 3 independent rules (four attributes change at once) | 4 rules, the first of which is a two-direction rule | "dots" palette, sets of 4–6, rows or columns |
 | 5 Master | core rule + 4 independent rules (five attributes change at once, inner shapes and count arithmetic in the pool) | 5 rules, the first of which is a two-direction rule | "dots" palette, sets of 5–7, the "neither" (complement of the union) operation in the pool, and distractors that are mostly one-element near misses |
-| 6 Grandmaster | five rules of which one is **coupled**: an attribute follows no row or column pattern of its own but is a fixed function of another attribute (e.g. small → solid, medium → hollow, large → striped) | 5 rules including a coupled one | union, intersection and exclusive-or puzzles become **two-way**: rows combine by one operation and columns by a different one, and the corner satisfies both; other set families as level 5 |
+| 6 Grandmaster | five rules of which one is **coupled**: an attribute is specified as a fixed function of another attribute; it may also have a valid independent row or column pattern (e.g. small → solid, medium → hollow, large → striped) | 5 rules including a coupled one | union, intersection and exclusive-or puzzles become **two-way**: rows combine by one operation and columns by a different one, and the corner satisfies both; other set families as level 5 |
 
 `puzzle.features` records the actual rule count, the rule types, whether a two-direction rule is present and
 the largest step, so the UI and the tests can check the level against these definitions.
+
+These labels are not strictly monotone. The rule-count proxy plateaus at 5→6 in ordinary
+figure families and at 2→3 in combination; palette size, direction and rule type are separate
+features. Split and composition currently have no structural progression at all. Injective
+coupling can preserve the source pattern rather than add a new deduction. See
+`review/adversarial-review.md` for per-level measurements and their limitations.
 
 ## Whole-matrix families
 
@@ -110,14 +116,14 @@ readings-based solver, and a puzzle is accepted only when every consistent readi
 | Family | What changes | Readings enumerated |
 |---|---|---|
 | path (Snake and spiral counts) | the number of markers follows a sequence along a path: row by row, as a snake, column-wise, or as a clockwise or anticlockwise spiral ending in the centre; constant step at levels 1–3, alternating steps (e.g. +2, −1) from level 3; at level 4+ the gap sits in the middle of a spiral | every path × constant step or alternating steps, plus the row/column count readings |
-| split (Three of each) | boxes divided into 2, 3 or 4 sections by varied line patterns; each count appears exactly three times in the matrix | three-of-each; constant |
+| split (Three of each) | boxes divided into 2, 3 or 4 sections by varied line patterns; each count appears exactly three times in the matrix | three-of-each; constant; row/column endpoint mirrors |
 | invariant (Fixed set with noise) | every cell holds the same fixed multiset of shapes (2–4 types) plus 0–3 random noise shapes with no system | exact core counts; column/row multisets; composition grid |
 | columnSet (Column sets) | every cell in a column holds the same multiset, positions random | column and row multisets |
 | composition (Count and composition) | the number of shapes follows a grid rule and a cell with n shapes shows the first n of a fixed chain | count readings; nested chain plus grid |
 | mirrorRows (Mirrored rows) | row 3 is row 1 mirrored (or rotated) cell by cell; row 2 is another transformation, scrambled from level 4 | row 3 or column 3 as a rigid transformation of row/column 1 or 2 |
 
 Ordinary figure puzzles are also checked against the rigid-transformation readings, so a rotation puzzle
-can never accidentally be read as "row 3 is row 2 flipped".
+reject a rigid-transformation reading when it predicts a different answer. Equivalent readings can remain.
 
 ## Other question types (non-matrix)
 
@@ -154,19 +160,19 @@ For every generated puzzle:
    the generator's grammar are enumerated too, so puzzles that admit them are rejected: a line that stays
    constant, "one of each" along rows only or columns only, "third = first + second", "first − second" and
    "|first − second|" for the number of shapes, row 3 copying row 1 or 2, column 3 copying column 1 or 2, and
-   constant diagonals, and coupled readings (an attribute determined by another attribute that has a unique
-   reading of its own, with the gap's source value already seen among the eight cells).
+   constant diagonals, row/column endpoint mirrors, angle addition modulo a full turn, and coupled readings (an attribute determined by another attribute that has a unique
+   reading of its own, with the gap's source value already seen among the eight cells). Reverse set operations are also checked against each offered option: a distractor that satisfies one is rejected, even if that reading does not uniquely predict a set without the options.
 2. **Visually distinct options.** Options are compared after canonicalising orientation by each shape's
    symmetry group, so two options can never render identically.
 3. **Distractors are misconceptions.** Each wrong option is built from one or two named mistakes (repeat the
    cell to the left, apply the step in the wrong direction, apply it twice, duplicate a value already used in
    the row, use union instead of intersection, leave out one element, …). The code and text are stored on the
-   puzzle. The five distractors are arranged in balanced clusters so that the answer is never the per-attribute
-   (or per-element) majority of the six options: comparing the options with each other, without reading the
-   matrix, finds the answer less often than chance (measured in `review/qa-report.md`).
+   puzzle. Balanced clusters and rejection gates reduce option-only shortcuts. The QA report measures
+   per-attribute/per-element voting, including shape/fill counts in whole-matrix cells. Ties abstain;
+   a low hit rate for this heuristic is not proof against all option-only strategies.
 4. **Explanations from the same specification.** Explanation, hints and accessible descriptions are rendered
    from the rule objects that generated the cells, never written separately.
-5. **Reproducible.** `generatePuzzle({family, difficulty, seed})` is a pure function of its arguments.
+5. **Reproducible.** `generatePuzzle({family, difficulty, seed})` is a pure function of its arguments within an engine revision. Changing rejection rules can change which candidate a seed produces.
 6. **Automated sweeps.** `npm test` regenerates 120 seeds for every family × difficulty and checks all of the
    above, and `tests/qa-solver.test.js` runs an independently written solver (`src/engine/qa-solver.js`, which
    reads only the eight cells and the options) over 200 seeds per family × difficulty, requiring agreement and

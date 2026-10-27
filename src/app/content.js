@@ -168,7 +168,7 @@ export const PRACTICE_MODES = {
   timed: { title: 'Timed session', blurb: 'Set a puzzle count and a time limit, then review everything at the end.' },
   review: { title: 'Mistake review', blurb: 'Revisit the puzzles you got wrong and see which misconception each option was testing.' },
   mock: { title: 'Mock test', blurb: 'A fixed set of questions on one clock. Move back and forth, flag questions for later, change answers, then finish and read the full report.' },
-  challenge: { title: 'Challenge', blurb: '12 matrices in 12 minutes, or 16 mixed questions (matrices, number series, logic, arithmetic, analogies) in 8 minutes, with difficulty stepping up and down, then a full report.' },
+  challenge: { title: 'Challenge', blurb: '12 matrices in 12 minutes, or 16 mixed questions (matrices, number series, logic, arithmetic, verbal reasoning) in 8 minutes, with difficulty stepping up and down, then a full report.' },
 };
 
 export const CHALLENGE_NOTE = 'This challenge is a practice format. The up-and-down difficulty rule is stated in full below; it does not reproduce the adaptive algorithm, item bank, timing, scoring or norms of Matrigma or any other published test, and the report is not an official or comparable score.';

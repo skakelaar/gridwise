@@ -17,7 +17,7 @@ const STAIRCASE = 'You start at level 3. Each correct answer moves the next ques
 
 export const CHALLENGE_FORMATS = {
   matrix: { id: 'matrix', label: '12 matrices in 12 minutes', count: 12, seconds: 60, blurb: 'All seven rule groups, whole-matrix patterns weighted double, 60 seconds per puzzle.', rule: `${STAIRCASE} Every puzzle has its own 60-second clock, so the whole challenge lasts at most 12 minutes.` },
-  mixed: { id: 'mixed', label: '16 mixed questions in 8 minutes', count: 16, seconds: 30, blurb: 'Eight matrices plus number series, logical deduction, fractions and arithmetic, and verbal analogies, 30 seconds each.', rule: `${STAIRCASE} Every question has its own 30-second clock, so the whole challenge lasts at most 8 minutes.` },
+  mixed: { id: 'mixed', label: '16 mixed questions in 8 minutes', count: 16, seconds: 30, blurb: 'Eight matrices plus number series, logical deduction, fractions and arithmetic, and verbal reasoning, 30 seconds each.', rule: `${STAIRCASE} Every question has its own 30-second clock, so the whole challenge lasts at most 8 minutes.` },
 };
 export const CHALLENGE_RULE = CHALLENGE_FORMATS.matrix.rule;
 

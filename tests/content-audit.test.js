@@ -21,3 +21,12 @@ test('all non-matrix guide examples render the generated explanation',()=>{
  for(const p of examples)for(const sentence of [p.explanation.summary,...p.explanation.steps])assert.ok(text.includes(sentence),p.id);
  }
 });
+
+test('coupled explanations do not falsely deny independent patterns',()=>{
+ for(let i=0;i<100;i++) {
+ const p=generateAny({family:'rotation',difficulty:6,seed:`audit-${i}`});
+ assert.ok(p.features.coupled);
+ assert.doesNotMatch(JSON.stringify(p.explanation),/no pattern of its own|rules work independently/);
+ assert.match(p.explanation.summary,/linked rule/);
+ }
+});

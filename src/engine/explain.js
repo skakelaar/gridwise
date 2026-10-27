@@ -131,7 +131,7 @@ export function explainRule(rule, domain, family, domains = null) {
       const links = Object.entries(p.map).map(([a, b]) => `${srcName(Number(a))} → ${vn(domain, attr, b)}`);
       const missingSrc = srcName(Number(Object.keys(p.map).find((a) => p.map[a] === V[2][2])));
       return {
-        row: `The ${label} has no pattern of its own: it is tied to the ${ATTR_LABEL[src]} (${listNames(links)}).`,
+        row: `The ${label} is tied to the ${ATTR_LABEL[src]} (${listNames(links)}).`,
         column: 'That link holds in every cell, across rows and down columns alike.',
         missing: `The missing cell's ${ATTR_LABEL[src]} is ${missingSrc}, so its ${label} must be ${vn(domain, attr, V[2][2])}.`,
       };
@@ -180,7 +180,7 @@ export function explainFigurePuzzle(rules, domains, family, answer) {
     : '';
   const summary = active.length === 1
     ? `One rule is at work: only the ${ATTR_LABEL[active[0].attr]} changes.`
-    : `${cap(NUMBER_WORDS[active.length])} rules work independently: ${listNames(active.map((r) => ATTR_LABEL[r.attr]))}. Check each on its own.`;
+    : `${cap(NUMBER_WORDS[active.length])} rules describe ${listNames(active.map((r) => ATTR_LABEL[r.attr]))}. ${active.some(r => r.type === 'coupled') ? 'Solve the source property before applying the linked rule.' : 'Check each property on its own.'}`;
   return {
     summary,
     rows,

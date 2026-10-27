@@ -49,7 +49,7 @@ docs/CONTRACTS.md     module interface contracts
 docs/VERIFICATION.md  what was verified and known limitations
 ```
 
-Puzzle logic never touches the DOM; the app layer only calls `generatePuzzle` and `renderCell`.
+Puzzle logic never touches the DOM; the app layer calls `generateAny`/`generatePuzzle` and the render layer.
 
 ## Whole-matrix puzzles and applied problems
 
@@ -73,23 +73,23 @@ clock, with Previous/Next, "Save this question for later", a jump list, answers 
 
 ## Challenge
 
-`#/challenge`: two formats, "12 matrices in 12 minutes" (60 s each, every rule group twice) and "16 mixed
+`#/challenge`: two formats, "12 matrices in 12 minutes" (60 s each, cycling seven rule groups with whole-matrix patterns weighted twice) and "16 mixed
 questions in 8 minutes" (30 s each: eight matrices plus two each of number series, logic, arithmetic and
-analogies). Difficulty follows
-a stated 1-up/1-down staircase (start at level 2; correct → up one level, incorrect or timeout → down one level,
-within 1–4). The report gives a plain-language assessment, a difficulty path, a memorandum of every answer
+verbal questions). Difficulty follows
+a stated 1-up/1-down staircase (start at level 3; correct → up one level, incorrect or timeout → down one level,
+within 1–6). The report gives a plain-language assessment, a difficulty path, a memorandum of every answer
 (your answer, the correct answer, result, time) and the full explanation of each puzzle. Finished challenges are
 kept locally so their reports can be reopened. The format is practice only and does not reproduce any
 publisher's adaptive algorithm, item bank, timing, scoring or norms.
 
 ## Difficulty levels
 
-Five structural levels: Basic (one rule), Intermediate (two), Advanced (three, with count arithmetic and
+Six labelled levels (structural features vary by family): Basic (one rule), Intermediate (two), Advanced (three, with count arithmetic and
 inner shapes entering the pool), Expert (four rules changing at once; set puzzles with up to six elements) and
 Master (five rules at once, complement set operations, two-level series, three-premise logic, compound
 arithmetic, rare vocabulary and reversed analogies) and Grandmaster (an attribute coupled to another attribute,
 and set puzzles with different operations along rows and columns). Non-matrix questions share their hardest
-forms between levels 5 and 6.
+forms between levels 5 and 6. Higher labels do not guarantee harder puzzles: split and composition have no structural progression, and level-6 coupled attributes can also admit an independent pattern. See the measurements in `review/adversarial-review.md`.
 
 ## Sections
 
