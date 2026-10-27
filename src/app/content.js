@@ -15,9 +15,7 @@ export const INTRO_STEPS = [
       + 'across and three columns down. The figures are not a picture; they are a pattern.</p>'
       + '<ul><li>Start with row 1. Ask what happens from the first cell to the second, then from the second to the third.</li>'
       + '<li>Check that row 2 does the same thing. If it does, you have found a row rule.</li>'
-      + '<li>Now do the same down column 1 and column 2. Some puzzles have a column rule instead of, or as well as, a row rule.</li></ul>'
-      + '<p>In the example, each flag turns 45° clockwise from one cell to the next along every row. Each row starts '
-      + 'from its own angle, so the columns carry no rule of their own.</p>',
+      + '<li>Now do the same down column 1 and column 2. Some puzzles have a column rule instead of, or as well as, a row rule.</li></ul>',
     example: { family: 'rotation', difficulty: 1, seed: 'intro6' },
   },
   {
@@ -26,21 +24,17 @@ export const INTRO_STEPS = [
       + 'Most of them stay fixed in any one puzzle. Name the ones that change and ignore the rest.</p>'
       + '<ul><li>Pick one property, such as size, and track it on its own across a row.</li>'
       + '<li>If it never changes, cross it off and move to the next property.</li>'
-      + '<li>The missing cell keeps every unchanged property exactly as it is everywhere else.</li></ul>'
-      + '<p>In the example only the size changes: each row goes small, medium, large. Shape, fill and number stay the same, '
-      + 'so any option that alters them is wrong before you even check the size.</p>',
+      + '<li>The missing cell keeps every unchanged property exactly as it is everywhere else.</li></ul>',
     example: { family: 'size', difficulty: 1, seed: 'q1' },
   },
   {
     title: 'Separate the rules when more than one is at work',
-    body: '<p>Harder puzzles change two or three properties at once. The rules are independent: each property follows '
-      + 'its own pattern, and the patterns can run in different directions.</p>'
+    body: '<p>Harder figure puzzles can change several properties at once. Many rules are independent: each property follows '
+      + 'its own pattern, and the patterns can run in different directions. At level 6, one property may also be tied to another.</p>'
       + '<ul><li>Handle one property at a time. Work out its rule and the value it needs in the missing cell.</li>'
       + '<li>Then do the next property. Do not try to see everything at once.</li>'
       + '<li>Some rules run in both directions at once, for example when each row <strong>and</strong> each column '
-      + 'contains each value exactly once.</li></ul>'
-      + '<p>In the example the fill alternates down the columns (hollow, striped, hollow) while the number of triangles '
-      + 'grows by one along the rows. Settle the fill first, then the count, and only one option fits both.</p>',
+      + 'contains each value exactly once.</li></ul>',
     example: { family: 'combination', difficulty: 1, seed: 'intro13' },
   },
   {
@@ -51,19 +45,16 @@ export const INTRO_STEPS = [
       + '<li><strong>Subtraction:</strong> the third cell is the first cell with the second cell\'s elements removed.</li>'
       + '<li><strong>Intersection:</strong> only the elements in both cells survive.</li>'
       + '<li><strong>Exclusive-or:</strong> only the elements in exactly one cell survive; shared ones vanish.</li></ul>'
-      + '<p>Test each operation on row 1 until one works, then confirm it on row 2. In the example the third cell '
-      + 'merges the first two: the top line appears in both and is kept once, not dropped.</p>',
+      + '<p>Test each operation on row 1 until one works, then confirm it on row 2.</p>',
     example: { family: 'union', difficulty: 1, seed: 'intro0' },
   },
   {
-    title: 'Confirm with row 3 and column 3',
+    title: 'Check the directions your rule actually uses',
     body: '<p>Once you think you know the rule, predict the missing cell before you look at the options. Then check your '
-      + 'prediction twice.</p>'
+      + 'prediction in every direction where the visible cells confirmed a rule.</p>'
       + '<ul><li>Apply the rule along row 3: do the first two cells lead to your prediction?</li>'
-      + '<li>Apply it down column 3 as well. A real rule never contradicts itself.</li>'
-      + '<li>If the two checks disagree, you have the wrong rule or the wrong direction. Go back to row 1.</li></ul>'
-      + '<p>In the example each row and each column contains one, two and three diamonds exactly once. Row 3 already has '
-      + 'three and two; column 3 already has three and two. Both leave only one answer.</p>',
+      + '<li>If you found a column rule, apply that rule down column 3 as well. A row rule need not work down columns.</li>'
+      + '<li>If the two checks disagree, you have the wrong rule or the wrong direction. Go back to row 1.</li></ul>',
     example: { family: 'number', difficulty: 1, seed: 'intro6' },
   },
   {
@@ -73,10 +64,8 @@ export const INTRO_STEPS = [
       + '<ul><li>Strike out any option that changes a property that stays fixed everywhere else.</li>'
       + '<li>Strike out any option that breaks a rule you have confirmed, even if it looks similar to the answer.</li>'
       + '<li>Beware the <strong>copy-the-neighbour</strong> trap: an option identical to the cell on the left of the gap, '
-      + 'the cell above it or the centre cell is almost always wrong, because the rule asks for one more step, not a repeat.</li>'
-      + '<li>If two options survive, you have missed a rule. Compare the two and find which property separates them.</li></ul>'
-      + '<p>In the example one option simply repeats the cell to the left of the gap. It breaks both rules: the fill '
-      + 'should return to solid, and the square should move one more step down.</p>',
+      + 'the cell above it or the centre cell needs checking. Some valid rules repeat cells; others require a change.</li>'
+      + '<li>If two options survive, compare their differing properties against the visible evidence. An alternative reading may expose an ambiguous puzzle.</li></ul>',
     example: { family: 'combination', difficulty: 1, seed: 'intro17' },
   },
   {
@@ -89,8 +78,7 @@ export const INTRO_STEPS = [
     body: '<p>Some cells carry a main figure <strong>and</strong> small marks around it. The two layers follow different rules, often in different directions: the figure may turn along the rows while the marks combine down the columns like a line-and-dot cell.</p>'
       + '<ul><li>Cover the marks with a finger and solve the figure on its own: shape, fill, rotation, reflection.</li>'
       + '<li>Then ignore the figure and treat the marks as a collection: which operation builds the third cell of each column (or row) from the first two?</li>'
-      + '<li>Only an option that satisfies both layers can be right. Most distractors get one layer right and the other wrong.</li></ul>'
-      + '<p>In the example the key turns 90° clockwise along each row and its fill alternates, while down each column the marks of the top two cells are added together to give the bottom cell.</p>',
+      + '<li>Only an option that satisfies both layers can be right. Most distractors get one layer right and the other wrong.</li></ul>',
     example: { family: 'composite', difficulty: 2, seed: 'learn815' },
   },
 ];
@@ -114,7 +102,7 @@ export const ITEM_GUIDES = {
       { title: 'Write the differences first', body: '<p>Under each gap, note how much the series changes. A constant difference (+3, +3, +3) or a constant ratio (×2, ×2) settles easy items at once.</p>' },
       { title: 'If the differences wander, look one layer deeper', body: '<p>Take the differences of the differences (they may themselves rise by a fixed amount), or check whether the operations <strong>alternate</strong> (+5, ×2, +5, ×2).</p>' },
       { title: 'Try two interleaved series', body: '<p>Read every second term as its own series. Two simple strands often masquerade as one hard one; three strands appear at the top levels.</p>' },
-      { title: 'Know the special sequences', body: '<p>Squares (1, 4, 9, 16), cubes, primes (2, 3, 5, 7, 11), Fibonacci-style sums of the previous two terms, and sums of digits turn up from the advanced level on.</p>' },
+      { title: 'Know the special sequences', body: '<p>Squares (1, 4, 9, 16), cubes, primes (2, 3, 5, 7, 11), Fibonacci-style sums of the previous two terms, and sums of digits turn up from intermediate levels onwards.</p>' },
     ],
     traps: 'Stopping at a rule that fits only the first three terms; continuing the wrong strand of an interleaved series; arithmetic slips of one step. Check your rule against every gap before you answer.',
     examples: [{ family: 'series', difficulty: 2, seed: 'learn-series' }, { family: 'series', difficulty: 4, seed: 'learn-series4' }],
@@ -127,7 +115,7 @@ export const ITEM_GUIDES = {
       { title: 'Draw the statements', body: '<p>“All A are B” puts circle A inside circle B. “No A are B” keeps the circles apart. “Some A are B” overlaps them. A named person is a dot you place according to what you are told.</p>' },
       { title: 'Follow the chain', body: '<p>“All A are B, all B are C” gives “all A are C”. “No B are C” with “all A are B” gives “no A are C”. “Some” never grows into “all”, and “all A are B” does not reverse into “all B are A”.</p>' },
       { title: 'Take “none of these” seriously', body: '<p>It is correct whenever every offered conclusion goes beyond the statements, which happens often at higher levels. It is wrong when one conclusion is forced.</p>' },
-      { title: 'Line-ups and orderings', body: '<p>For “Ana is taller than Ben; Ben is taller than Cy” style items, draw the line. Only relations between people who are linked through the chain are settled; two people never compared stay undecided.</p>' },
+      { title: 'Line-ups and orderings', body: '<p>For “Ana is taller than Ben; Ben is taller than Cy” style items, draw the line. Only relations between people who are linked through the chain are settled; two people with no comparison chain connecting them stay undecided.</p>' },
     ],
     traps: 'Reading “some” as “all”; reversing a universal statement; using what you know about the real world instead of the statements; and preferring a plausible conclusion to a forced one.',
     examples: [{ family: 'logic', difficulty: 2, seed: 'learn-logic' }, { family: 'logic', difficulty: 4, seed: 'learn-logic4' }],
@@ -215,20 +203,20 @@ export const STATS_CAVEAT =
 
 export const PERSONALISATION_NOTE =
   'Practice personalisation is off by default. When it is on, it follows one simple rule that you can check for yourself: '
-  + 'the next rule group is chosen at random with probability proportional to one plus your recent mistakes in that group, '
-  + 'so groups you have struggled with come up more often; the difficulty goes up one level after three consecutive correct '
+  + 'the next family is chosen at random with probability proportional to one plus its mistakes among your last 30 attempts, '
+  + 'so families you have struggled with come up more often; the difficulty goes up one level after three consecutive correct '
   + 'answers at the current level and goes down one level after two consecutive mistakes. Nothing else influences the choice.';
 
 export const LIMITATIONS = [
   'Scores here are not comparable with other trainers or tests: question banks, time limits and distractor styles differ. If another trainer feels harder, use a higher level, the practice clock, or the Master mock tier.',
   'Number series, logical deduction, arithmetic and analogy questions are original and generated from a small set of templates and a curated English word bank; they are practice in those formats, not a reconstruction of any published test\'s items.',
   'The 12-in-12 challenge uses a simple, stated up-and-down difficulty rule; it is not the adaptive procedure of any published test and its report is not an official or comparable score.',
-  'Levels 4 to 6 (Expert, Master, Grandmaster) stack more simultaneous rules, add inner shapes, count arithmetic, complement and two-way set operations, attributes tied to other attributes, two-level number series, three-premise logic and an advanced vocabulary band; they are harder by construction, not by any measured norm. Non-matrix questions share their hardest forms between levels 5 and 6.',
+  'Levels 4 to 6 (Expert, Master, Grandmaster) stack more simultaneous rules, add inner shapes, count arithmetic, complement and two-way set operations, attributes tied to other attributes, two-level number series, three-premise logic and an advanced vocabulary band; these features do not guarantee a harder puzzle at every successive level. Split and composition puzzles have no structural level progression. Non-matrix questions share their hardest forms between levels 5 and 6.',
   'Each puzzle is checked to have exactly one answer within the supported rule grammar (progressions, alternations, one-of-each layouts and set operations), not against every pattern a person might imagine.',
   'Difficulty levels are structural: they count the rules in play, whether rules run in both directions, the step size and the size of the element palette. They are not psychometrically calibrated.',
   'The app never produces an IQ, a percentile or any score meant to be equivalent to an official test.',
   'Timing presets are practice conventions chosen for this app. They do not reproduce the timing, length or scoring of any official test.',
   'Your progress is stored only in this browser. Clearing site data, switching browsers or using private browsing will lose it, and nothing is sent anywhere.',
   'Statistics from a small number of attempts are unreliable; see the caveat shown next to them.',
-  'A human reviewer sampled generated puzzles for clarity and fairness but did not inspect every seed, so an occasional awkward puzzle is possible.',
+  'Automated checks and sampled reviews cover a finite set of seeds and readings. They cannot establish that every puzzle has only one reasonable interpretation.',
 ];

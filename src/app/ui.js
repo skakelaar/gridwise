@@ -95,7 +95,7 @@ export function familySelect({ id, value, onChange }) {
 
 export function difficultySelect({ id, value, onChange }) {
   const sel = h('select', { id, class: 'select', onChange: (e) => onChange(e.target.value) });
-  sel.appendChild(h('option', { value: 'mixed' }, 'Mixed (1–6)'));
+  sel.appendChild(h('option', { value: 'mixed' }, 'Mixed (2–6)'));
   for (const d of [1, 2, 3, 4, 5, 6]) sel.appendChild(h('option', { value: String(d) }, `${d} – ${DIFFICULTY_LABELS[d]}`));
   sel.value = String(value ?? 'mixed');
   return sel;
@@ -158,6 +158,7 @@ export function renderIntro({ examples }) {
         examples[i] ? h('figure', { class: 'intro-example' },
           h('div', { class: 'sample-preview cell', html: renderMatrixPreview(examples[i], { cellSize: 52, gap: 5 }) }),
           h('figcaption', null, `Example: ${examples[i].familyLabel} (${examples[i].difficultyLabel.toLowerCase()})`),
+          h('details', null, h('summary', null, 'Worked explanation'), explanationBlock(examples[i], null)),
         ) : null,
       )),
     ),
