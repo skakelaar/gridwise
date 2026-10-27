@@ -169,12 +169,11 @@ were inspected, but no OS-level reduced-motion or real screen-reader run occurre
 
 ## Residual risk and work not completed
 
-1. **Historical replay across revisions:** saved history contains seeds and option
-   indices, not original cells/options or an engine version. Rejection-rule fixes
-   can regenerate a different item for an old seed. Existing historical correctness
-   totals are retained, but replay may differ. Recovering the exact old item requires
-   its old engine revision or a snapshot that was never stored. A versioned-history
-   migration/legacy-engine policy was not implemented in this audit.
+1. **Historical replay across revisions — addressed in follow-up:** new records now
+   retain versioned question snapshots. Seed-only history keeps its recorded results
+   but explicitly refuses reconstruction; unfinished legacy sessions stop safely.
+   Exact old questions cannot be recovered when no snapshot was stored. See
+   [historical-replay.md](historical-replay.md) for the reproduction and regression evidence.
 2. **Other readings:** binary XOR of arbitrary angle indices still produces probe
    hits, but the numbering-dependent bitwise rule was not established as a natural
    visual reading. Count parity leaves magnitude undetermined. A complement over

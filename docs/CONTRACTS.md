@@ -75,3 +75,38 @@ calls `generateAny`/`generatePuzzle` and the render layer.
 Default off. When on: pick the next family with probability proportional to (1 + recent mistakes in that family),
 and raise difficulty by one level after 3 consecutive correct answers at the current level, lower it after 2
 consecutive mistakes. State this rule in the UI verbatim.
+
+
+### Saved question snapshots — `src/app/replay.js`
+
+Version 1 stores `{ version: 1, key, puzzle }` as `snapshot` on attempts, mistakes and assigned
+session items. The puzzle is a detached JSON copy of the generated payload, including cells,
+shuffled options, answer index, explanation, hints, distractor notes, accessible descriptions and
+rule parameters. Diagnostic `verification` traces are omitted. Dot-set cells also retain their
+`dotElements` order; partition cells retain their `lines`, so changes to engine-owned geometry
+tables cannot reinterpret old diagrams. No executable HTML or generator is stored.
+
+The content-derived key separates different questions generated from the same family/level/seed;
+it is the attempt/mistake `puzzleId`. Its checksum detects accidental payload changes, not malicious
+modification. `savedPuzzle(record)` returns detached data or `null`; `requireSavedPuzzle` throws
+on unavailable data. Neither regenerates a seed, revalidates historical rules against a newer
+solver, nor re-marks stored results. Stored labels and explanations belong to the original question.
+
+Fixed timed and mock sessions snapshot every slot before first display. Challenges snapshot a slot
+when its adaptive level is assigned; unassigned future slots are not historical questions. Session
+records carry `snapshotVersion: 1`. Keep version-1 cell/render semantics and this reader compatible;
+introduce a new version and reader for incompatible formats. Do not reinterpret version 1 or
+silently migrate seed-only history using the current engine. Unknown versions and damaged snapshots
+remain stored, but cannot be replayed. The app does not retain old executable engine versions.
+
+Legacy attempts/mistakes and completed sessions remain in place, with recorded result, selection and
+answer index (when present). The UI explicitly distinguishes unavailable questions from unassigned
+challenge slots. Loading an unfinished session with missing/unsupported snapshots ends it with
+`endedBy: 'unavailable'` before timeout catch-up or grading; answers and adaptive state are retained.
+A legacy mock's pending attempt log uses its recorded metadata, never a regenerated answer key.
+
+Snapshots are inline with their records, so saving a question and its result does not require a
+second storage-key write. Existing retention limits (5,000 attempts, 20 reports of each kind; mistakes
+until removed) remain. Browser quota can be reached before those maxima. Failed writes still use
+memory and now show a visible warning on the next screen render. This does not provide durable
+storage when the browser denies writes, or atomic transactions across the separate history keys.

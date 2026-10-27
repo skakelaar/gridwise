@@ -5,7 +5,7 @@ replaces the accumulated historical counts; earlier claims remain in Git history
 
 ## Reproducible checks
 
-* `npm test`: **356 tests pass**, zero failures (9.30 seconds in the final run).
+* `npm test`: **368 tests pass**, zero failures.
   The starting checkout passed 329 tests, not the 328 stated in the review brief.
 * `node tools/qa-report.js 200`: **27,600 puzzles = 23 matrix families × 6 levels ×
   200 seeds**. See `review/qa-report.md` for actual results, structural checks and
@@ -53,6 +53,16 @@ On the isolated test origin `http://localhost:8081`:
   ring, dot, cross, square and bar were inspected: `review/browser-320-dark.png`.
   Foreground #ece6d8 on #16262a has a calculated contrast ratio of 12.55:1.
 
+## Historical replay follow-up
+
+`tests/replay.test.js` adds 12 regressions, including all 29 families at all six levels,
+actual pre-audit seed drift, detached copies, content identity, retired families, geometry-table
+changes, JSON reloads, adaptive assignment, legacy sessions and unavailable UI. The Chromium
+check replayed the old `rotation/1/audit-185` snapshot after reload and accepted its original
+answer 2; legacy mistake, timed, mock and challenge routes retained results and refused
+regeneration. `node tools/qa-report.js 200` was rerun: all 27,600 agree, zero ambiguous
+and zero disagreements. No generator or solver rules changed in this follow-up.
+
 ## Not verified / residual risk
 
 * No real screen-reader session. DOM/AX inspection is not a screen-reader audit.
@@ -64,7 +74,8 @@ On the isolated test origin `http://localhost:8081`:
 * No atomic multi-key persistence guarantee during a browser/process crash.
 * Seeds are reproducible within a revision. Stronger rejection rules can change
   their generated puzzle. Old seed-only history cannot reconstruct the earlier
-  cell/option snapshot; historical replay across engine updates remains a risk.
+  cell/option snapshot. These legacy records now explicitly refuse replay while retaining
+  recorded results. New records use versioned snapshots; see `review/historical-replay.md`.
 * A finite grammar and finite word bank audit cannot establish human uniqueness
   or psychometric difficulty. See `review/adversarial-review.md` for findings,
   competing interpretations, measured plateaus and the remaining uncertainty.

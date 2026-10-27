@@ -98,3 +98,19 @@ other question type), **Practise** (any question type and level, hints on or off
 **Test** (mock test, adaptive challenge or timed drill behind one switcher), **Results** (progress, mistakes,
 past reports) and **Settings**. Older routes (`#/guided`, `#/review`, `#/progress`) redirect.
 See `docs/RULES.md` for the exact definitions.
+
+
+## Saved questions and older history
+
+New attempts, mistakes and assigned test questions contain versioned snapshots of the question,
+option order, answer, hints and explanation. Review and reports read these snapshots without running
+the current puzzle generator. Fixed tests snapshot all questions when created; adaptive challenges
+snapshot each question when its level is assigned.
+
+Older records contain only seeds and results. Their recorded results are retained, but the app labels
+the original question unavailable instead of silently generating a different one. Unfinished older
+sessions end safely on reload. Unsupported or damaged snapshots also refuse replay.
+
+Snapshots use more browser storage than seeds. Existing history limits still apply; if a storage
+operation fails, the app warns that recent data may only survive in the current tab. See
+`docs/CONTRACTS.md` for the versioned replay contract and `review/historical-replay.md` for the reproduction.
