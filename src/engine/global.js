@@ -465,7 +465,7 @@ export function buildMirrorRows(difficulty, rng) {
   const t2 = rng.pick(Object.keys(TRANSFORMS).filter((t) => t !== t3));
   const row2 = row1.map((c) => applyT(TRANSFORMS[t2], c));
   const row3 = row1.map((c) => applyT(TRANSFORMS[t3], c));
-  // at higher levels, row 2 is scrambled so it cannot serve as an anchor
+  // At higher levels, shuffle row 2; the shuffle can preserve its original order.
   const row2cells = difficulty >= 4 ? rng.shuffle(row2) : row2;
   const cells = [...row1, ...row2cells, ...row3];
   const preds = predictMirror(cells);
@@ -486,12 +486,13 @@ export function buildMirrorRows(difficulty, rng) {
   wrong.push({ cell: figureCell({ ...cells[5] }), code: 'copy-above', text: 'copies the cell above' });
   const ds = fiveDistinct(wrong, (d) => cellKey(d.cell), rng, answerKey);
   if (!ds) return null;
+  if (!ds.some(d => d.cell.flip === answer.flip)) return null;
   return {
     kind: 'figure', cells, ...assemble(answer, ds, rng),
     explanation: {
       summary: 'The rows are transformations of one another: the bottom row is the top row transformed.',
       rows: [`Row 3 is row 1 ${TRANSFORMS[t3].text}, cell by cell.`],
-      columns: [difficulty >= 4 ? 'Row 2 holds the same figures in a different order and does not help with the gap.' : `Row 2 is row 1 ${TRANSFORMS[t2].text}.`],
+      columns: [difficulty >= 4 ? 'Row 2 is also transformed from row 1, with its cells possibly reordered. Comparing row 1 with row 3 is enough to fill the gap.' : `Row 2 is row 1 ${TRANSFORMS[t2].text}.`],
       missing: [`Take the top-right cell and apply the same transformation: ${TRANSFORMS[t3].text}.`],
       unchanged: `Unchanged throughout: shape (${shape}), fill (${fill === 'none' ? 'hollow' : fill === 'solid' ? 'solid' : 'striped'}).`,
     },

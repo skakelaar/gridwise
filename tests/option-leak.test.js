@@ -23,3 +23,10 @@ test('invariant and composition answers are not exposed by per-component option 
  assert.notEqual(majorityPick(p),p.correctIndex,p.id);
  }
 });
+
+test('mirrored rows cannot isolate the answer by reflection alone',()=>{
+ for(let difficulty=1;difficulty<=6;difficulty++)for(let i=0;i<250;i++) {
+ const p=generatePuzzle({family:'mirrorRows',difficulty,seed:`audit-${i}`});
+ assert.ok(p.options.filter(o=>o.flip===p.cells[8].flip).length>1,p.id);
+ }
+});
