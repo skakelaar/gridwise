@@ -164,3 +164,24 @@ export function predictSet(palette, known /* 3x3 of member arrays, [2][2] null *
   if (sameSet(known[1][1], known[0][0]) && sameSet(known[1][2], known[0][1]) && sameSet(known[2][1], known[1][0])) add('diagonal', known[1][1]);
   return preds;
 }
+
+// Reverse operations are constraints, not always single-valued predictions (A = B ∪ C
+// can admit several C). Check every offered completion without weakening predictSet.
+export function reverseSetReadings(palette, known, candidate) {
+  const grid = known.map(row => row.slice());
+  grid[2][2] = candidate;
+  const seen = [...new Set(known.flat().filter(Boolean).flat())];
+  const ops = { ...SetOps, ...paletteOps(palette),
+    neitherSeen: (a, b) => seen.filter(x => !a.includes(x) && !b.includes(x)),
+    notBothSeen: (a, b) => seen.filter(x => !(a.includes(x) && b.includes(x))),
+  };
+  const readings = [];
+  for (const axis of ['row', 'col']) {
+    const lines = axis === 'row' ? grid : [0, 1, 2].map(c => grid.map(row => row[c]));
+    for (const [name, op] of Object.entries(ops)) {
+      if (lines.every(([a, b, c]) => sameSet(a, op(b, c)))) readings.push(`${axis}:first=${name}`);
+      if (lines.every(([a, b, c]) => sameSet(b, op(a, c)))) readings.push(`${axis}:second=${name}`);
+    }
+  }
+  return readings;
+}

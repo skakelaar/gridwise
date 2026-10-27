@@ -199,8 +199,8 @@ export function setPatterns(grid, elements) {
       // standard reading: third cell = op(first, second)
       if (lines.every((l) => sameSet(op(l[0], l[1]), l[2]))) add(`${dir}:${opName}`, true);
       // reverse readings: first cell = op(second, third), middle cell = op(first, third)
-      if (lines.every((l) => sameSet(op(l[1], l[2]), l[0]))) add(`${dir}:first=${opName}(second,third)`, false);
-      if (lines.every((l) => sameSet(op(l[0], l[2]), l[1]))) add(`${dir}:second=${opName}(first,third)`, false);
+      if (lines.every((l) => sameSet(op(l[1], l[2]), l[0]))) add(`${dir}:first=${opName}(second,third)`, true);
+      if (lines.every((l) => sameSet(op(l[0], l[2]), l[1]))) add(`${dir}:second=${opName}(first,third)`, true);
     }
     if (lines.every((l) => l.every((m) => sameSet(m, l[0])))) add(`${dir}Const`, false);
     // every element occurs the same number of times in every line

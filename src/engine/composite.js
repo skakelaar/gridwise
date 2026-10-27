@@ -5,7 +5,7 @@
 import { ORIENTED_SHAPES, SET_PALETTES, transformConflict } from './shapes.js';
 import { makeDomains, compositeCell, cellKey, SetOps, paletteOps, sameSet } from './cells.js';
 import { makeRule } from './rules.js';
-import { predictAttribute, predictSet } from './solver.js';
+import { predictAttribute, predictSet, reverseSetReadings } from './solver.js';
 import { explainRule, OP_TEXT } from './explain.js';
 import { valueName, ATTR_LABEL, listNames, describeCell } from './text.js';
 
@@ -115,6 +115,7 @@ export function buildComposite(difficulty, rng) {
 
   const options = buildCompositeOptions(cells, rules, domains, op, setAxis, partsGrid, d, rng);
   if (!options) return null;
+  if (options.options.some(c => !sameSet(c.parts, answer.parts) && reverseSetReadings('parts', knownParts, c.parts).length)) return null;
   const active = FIG_ATTRS.filter((a) => rules[a].type !== 'const').map((a) => rules[a]);
   return {
     rules: Object.values(rules),
@@ -195,12 +196,14 @@ function buildCompositeOptions(cells, rules, domains, op, setAxis, partsGrid, di
     return rng.shuffle(out);
   };
   const answerAsBase = { cell: answer, code: 'marks', text: 'has the right figure but the wrong marks: it' };
+  const known = partsGrid.map(row => row.slice()); known[2][2] = null;
+  const lawful = c => !sameSet(c.cell.parts, answer.parts) && reverseSetReadings('parts', known, c.cell.parts).length > 0;
   // Two balanced clusters of three: {answer, answer with one figure slip, answer with one mark slip} and the same
   // around the primary misconception W, so neither cluster stands out and a per-attribute majority vote ties.
   const used = new Set([cellKey(answer)]);
   const chosen = [];
-  const take = (cand) => { if (!cand) return false; const k = cellKey(cand.cell); if (used.has(k)) return false; used.add(k); chosen.push(cand); return true; };
-  const W = rng.shuffle(wrongOps)[0] || rng.shuffle(copies)[0];
+  const take = (cand) => { if (!cand || lawful(cand)) return false; const k = cellKey(cand.cell); if (used.has(k)) return false; used.add(k); chosen.push(cand); return true; };
+  const W = [...rng.shuffle(wrongOps), ...rng.shuffle(copies), ...nearOf(answerAsBase)].find(c => !lawful(c));
   if (!W) return null;
   take(W);
   const aSlips = rng.shuffle(figMisses);

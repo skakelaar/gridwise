@@ -1,0 +1,183 @@
+{
+  "cells": [
+    {
+      "kind": "composite",
+      "shape": "ell",
+      "fill": "hatched",
+      "rot": 3,
+      "flip": 0,
+      "parts": [
+        "ring",
+        "bar"
+      ]
+    },
+    {
+      "kind": "composite",
+      "shape": "ell",
+      "fill": "hatched",
+      "rot": 4,
+      "flip": 0,
+      "parts": [
+        "cross",
+        "square"
+      ]
+    },
+    {
+      "kind": "composite",
+      "shape": "ell",
+      "fill": "hatched",
+      "rot": 5,
+      "flip": 0,
+      "parts": [
+        "dot",
+        "cross"
+      ]
+    },
+    {
+      "kind": "composite",
+      "shape": "ell",
+      "fill": "hatched",
+      "rot": 5,
+      "flip": 0,
+      "parts": [
+        "cross",
+        "square"
+      ]
+    },
+    {
+      "kind": "composite",
+      "shape": "ell",
+      "fill": "hatched",
+      "rot": 6,
+      "flip": 0,
+      "parts": [
+        "ring",
+        "bar"
+      ]
+    },
+    {
+      "kind": "composite",
+      "shape": "ell",
+      "fill": "hatched",
+      "rot": 7,
+      "flip": 0,
+      "parts": [
+        "ring",
+        "square"
+      ]
+    },
+    {
+      "kind": "composite",
+      "shape": "ell",
+      "fill": "hatched",
+      "rot": 0,
+      "flip": 0,
+      "parts": [
+        "ring",
+        "cross",
+        "square",
+        "bar"
+      ]
+    },
+    {
+      "kind": "composite",
+      "shape": "ell",
+      "fill": "hatched",
+      "rot": 1,
+      "flip": 0,
+      "parts": [
+        "ring",
+        "cross",
+        "square",
+        "bar"
+      ]
+    },
+    {
+      "kind": "composite",
+      "shape": "ell",
+      "fill": "hatched",
+      "rot": 2,
+      "flip": 0,
+      "parts": [
+        "dot",
+        "ring",
+        "cross",
+        "square"
+      ]
+    }
+  ],
+  "options": [
+    {
+      "kind": "composite",
+      "shape": "ell",
+      "fill": "hatched",
+      "rot": 2,
+      "flip": 0,
+      "parts": [
+        "dot",
+        "ring",
+        "cross",
+        "square"
+      ]
+    },
+    {
+      "kind": "composite",
+      "shape": "ell",
+      "fill": "none",
+      "rot": 2,
+      "flip": 0,
+      "parts": [
+        "ring",
+        "square"
+      ]
+    },
+    {
+      "kind": "composite",
+      "shape": "ell",
+      "fill": "none",
+      "rot": 2,
+      "flip": 0,
+      "parts": [
+        "dot",
+        "ring",
+        "cross",
+        "square"
+      ]
+    },
+    {
+      "kind": "composite",
+      "shape": "ell",
+      "fill": "hatched",
+      "rot": 1,
+      "flip": 0,
+      "parts": [
+        "dot",
+        "ring",
+        "cross",
+        "square"
+      ]
+    },
+    {
+      "kind": "composite",
+      "shape": "ell",
+      "fill": "hatched",
+      "rot": 2,
+      "flip": 0,
+      "parts": [
+        "ring"
+      ]
+    },
+    {
+      "kind": "composite",
+      "shape": "ell",
+      "fill": "hatched",
+      "rot": 2,
+      "flip": 0,
+      "parts": [
+        "ring",
+        "square"
+      ]
+    }
+  ],
+  "correctIndex": 0
+}

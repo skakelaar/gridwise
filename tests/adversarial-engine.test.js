@@ -17,3 +17,13 @@ test('split audit-18: row endpoints supply a second lawful answer', () => {
   }
 });
 
+
+test('composite audit-0: reverse subtraction is a second answer, not a harmless weak reading', async () => {
+  const {default:p}=await import('./fixtures/composite-1-audit-0.json',{with:{type:'json'}});
+  const {reverseSetReadings}=await import('../src/engine/solver.js');
+  const g=[0,3,6].map(i=>p.cells.slice(i,i+3).map(c=>c.parts));g[2][2]=null;
+  assert.ok(reverseSetReadings('parts',g,p.options[5].parts).length);
+  assert.equal(solveIndependently(p).ambiguous,true);
+  const repaired=generatePuzzle({family:'composite',difficulty:1,seed:'audit-0'});
+  assert.equal(solveIndependently(repaired).ambiguous,false);
+});

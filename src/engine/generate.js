@@ -4,7 +4,7 @@ import { Rng } from './rng.js';
 import { PLAIN_SHAPES, ORIENTED_SHAPES, SET_PALETTES } from './shapes.js';
 import { makeDomains, FIGURE_ATTRS, figureCell, setCell, cellKey, SetOps, sameSet, paletteOps } from './cells.js';
 import { makeRule, wrapValue, RULE_TYPES_BY_KIND } from './rules.js';
-import { predictAttribute, predictSet } from './solver.js';
+import { predictAttribute, predictSet, reverseSetReadings } from './solver.js';
 import { explainFigurePuzzle, figureHints, explainSetPuzzle, setHints, OP_TEXT } from './explain.js';
 import { describeCell, valueName, ATTR_LABEL, listNames } from './text.js';
 import { GLOBAL_BUILDERS } from './global.js';
@@ -531,6 +531,7 @@ function buildSetPuzzle(family, fam, difficulty, rng) {
   const answer = cells[8];
   const options = buildSetOptions(op, colOp ? 'row' : orientation, palette, grid, cells, rng, difficulty);
   if (!options) return null;
+  if (options.cells.some((c, i) => i !== options.correctIndex && reverseSetReadings(palette, known, c.members).length)) return null;
   return finish({
     kind: 'set',
     setRule: { op, orientation: colOp ? 'row' : orientation, palette, opLabel: fam.framing === 'contains' ? 'contains' : OP_TEXT[op].name, colOp, framing: fam.framing || null },
@@ -587,11 +588,14 @@ function buildSetOptions(op, orientation, palette, grid, cells, rng, difficulty 
   // Recipe: two balanced clusters of three — the answer with two near misses, and a primary misconception W
   // (a wrong operation, else a copied cell) with two near misses of its own — so that neither cluster can be
   // told from the other without reading the matrix, and a per-element majority vote never singles out the answer.
-  const pool = [...rng.shuffle(wrongOps), ...rng.shuffle(copies)];
+  const known = grid.map(row => row.slice()); known[2][2] = null;
+  const lawful = c => reverseSetReadings(palette, known, c.cell.members).length > 0;
+  const pool = [...rng.shuffle(wrongOps), ...rng.shuffle(copies), ...random].filter(c => !lawful(c));
   const used = new Set([cellKey(answer)]);
   const chosen = [];
   const take = (cand) => {
     if (!cand || !cand.cell.members.length) return false;
+    if (lawful(cand)) return false;
     const k = cellKey(cand.cell);
     if (used.has(k)) return false;
     used.add(k);
