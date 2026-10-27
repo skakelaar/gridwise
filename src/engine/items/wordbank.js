@@ -355,7 +355,7 @@ export const CLOZE = [
   { w: 'feasible', level: 3, s: 'Finishing the bridge by spring is ____ only if the weather holds.', avoid: ['pragmatic'] },
   { w: 'impartial', level: 3, s: 'A referee must remain ____ even when one side is the home team.' },
   { w: 'resilient', level: 3, s: 'The community proved ____, rebuilding within months of the flood.', avoid: ['stubborn', 'tenacious'] },
-  { w: 'tedious', level: 3, s: 'Entering the data by hand was ____, but it had to be done.' },
+  { w: 'tedious', level: 3, s: 'Entering the data was easy but ____: the same dull, unvarying task repeated for hours.', avoid: ['arduous', 'hackneyed', 'insipid'] },
   { w: 'frugal', level: 3, s: 'Being ____ with money, she mended her coat rather than buy a new one.', avoid: ['cautious', 'circumspect', 'prudent'] },
   { w: 'eloquent', level: 3, s: 'The ____ speaker held the hall silent for an hour.' },
   { w: 'diligent', level: 3, s: 'A ____ student revises steadily rather than cramming the night before.' },
