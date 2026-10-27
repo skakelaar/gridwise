@@ -1,0 +1,506 @@
+[
+  {
+    "family": "series",
+    "difficulty": 1,
+    "seeds": 1000,
+    "rules": {
+      "halving": 204,
+      "geom": 160,
+      "growingStep": 208,
+      "arith": 196,
+      "arithNeg": 232
+    }
+  },
+  {
+    "family": "series",
+    "difficulty": 2,
+    "seeds": 1000,
+    "rules": {
+      "altOps": 161,
+      "squares": 153,
+      "squaresPlus": 161,
+      "letters": 192,
+      "cubes": 186,
+      "fib": 147
+    }
+  },
+  {
+    "family": "series",
+    "difficulty": 3,
+    "seeds": 1000,
+    "rules": {
+      "primes": 165,
+      "interleaved": 181,
+      "pairwise": 194,
+      "altAddSub": 215,
+      "lettersGrowing": 245
+    }
+  },
+  {
+    "family": "series",
+    "difficulty": 4,
+    "seeds": 1000,
+    "rules": {
+      "linearRec": 223,
+      "exponentPairs": 183,
+      "secondDiff": 197,
+      "letterPairs": 202,
+      "triMix": 195
+    }
+  },
+  {
+    "family": "series",
+    "difficulty": 5,
+    "seeds": 1000,
+    "rules": {
+      "letterSquares": 166,
+      "primeDiffs": 167,
+      "squareDiffs": 160,
+      "tripleInterleave": 186,
+      "digitSum": 149,
+      "recur2": 172
+    }
+  },
+  {
+    "family": "series",
+    "difficulty": 6,
+    "seeds": 1000,
+    "rules": {
+      "tripleInterleave": 164,
+      "squareDiffs": 164,
+      "letterSquares": 164,
+      "digitSum": 153,
+      "recur2": 184,
+      "primeDiffs": 171
+    }
+  },
+  {
+    "family": "logic",
+    "difficulty": 1,
+    "seeds": 1000,
+    "rules": {
+      "conditional": 302,
+      "ordering": 341,
+      "universal": 357
+    }
+  },
+  {
+    "family": "logic",
+    "difficulty": 2,
+    "seeds": 1000,
+    "rules": {
+      "universal": 240,
+      "ordering": 258,
+      "conditional": 246,
+      "universal-negative": 256
+    }
+  },
+  {
+    "family": "logic",
+    "difficulty": 3,
+    "seeds": 1000,
+    "rules": {
+      "chain": 192,
+      "universal": 210,
+      "universal-negative": 213,
+      "ordering": 185,
+      "conditional": 200
+    }
+  },
+  {
+    "family": "logic",
+    "difficulty": 4,
+    "seeds": 1000,
+    "rules": {
+      "conditional": 211,
+      "universal-negative": 180,
+      "chain": 201,
+      "ordering": 189,
+      "universal": 219
+    }
+  },
+  {
+    "family": "logic",
+    "difficulty": 5,
+    "seeds": 1000,
+    "rules": {
+      "chain": 261,
+      "ordering": 217,
+      "chain3": 244,
+      "conditional-chain": 278
+    }
+  },
+  {
+    "family": "logic",
+    "difficulty": 6,
+    "seeds": 1000,
+    "rules": {
+      "ordering": 232,
+      "chain": 241,
+      "chain3": 250,
+      "conditional-chain": 277
+    }
+  },
+  {
+    "family": "numeric",
+    "difficulty": 1,
+    "seeds": 1000,
+    "rules": {
+      "ratio": 279,
+      "equivalence": 345,
+      "percent": 376
+    }
+  },
+  {
+    "family": "numeric",
+    "difficulty": 2,
+    "seeds": 1000,
+    "rules": {
+      "equivalence": 210,
+      "percent": 247,
+      "ratio": 178,
+      "percent-of-what": 227,
+      "fraction-subtract": 35,
+      "fraction-add": 103
+    }
+  },
+  {
+    "family": "numeric",
+    "difficulty": 3,
+    "seeds": 1000,
+    "rules": {
+      "percent-of-what": 199,
+      "equation-fill": 199,
+      "fraction-add": 115,
+      "fraction-divide": 84,
+      "fraction-subtract": 41,
+      "fraction-multiply": 145,
+      "compare-fractions": 217
+    }
+  },
+  {
+    "family": "numeric",
+    "difficulty": 4,
+    "seeds": 1000,
+    "rules": {
+      "fraction-divide": 78,
+      "fraction-multiply": 132,
+      "compare-fractions": 243,
+      "equation-fill": 206,
+      "equation-pair": 176,
+      "fraction-add": 116,
+      "fraction-subtract": 49
+    }
+  },
+  {
+    "family": "numeric",
+    "difficulty": 5,
+    "seeds": 1000,
+    "rules": {
+      "mixed-add": 111,
+      "compound-percent": 182,
+      "powers-roots": 238,
+      "equation-pair": 237,
+      "mixed-subtract": 74,
+      "ratio-share": 158
+    }
+  },
+  {
+    "family": "numeric",
+    "difficulty": 6,
+    "seeds": 1000,
+    "rules": {
+      "compound-percent": 205,
+      "mixed-subtract": 71,
+      "equation-pair": 217,
+      "powers-roots": 203,
+      "ratio-share": 179,
+      "mixed-add": 125
+    }
+  },
+  {
+    "family": "analogy",
+    "difficulty": 1,
+    "seeds": 1000,
+    "rules": {
+      "producer": 52,
+      "container": 38,
+      "function": 32,
+      "unit": 52,
+      "player": 41,
+      "gender": 33,
+      "category": 37,
+      "opposite": 47,
+      "home": 41,
+      "workplace": 35,
+      "degree": 46,
+      "sound": 45,
+      "material": 36,
+      "sequence": 40,
+      "cause": 34,
+      "expert": 40,
+      "symptom": 56,
+      "study": 31,
+      "collective": 53,
+      "adjective": 48,
+      "part": 37,
+      "tool": 39,
+      "young": 39,
+      "agent": 48
+    }
+  },
+  {
+    "family": "analogy",
+    "difficulty": 2,
+    "seeds": 1000,
+    "rules": {
+      "adjective": 39,
+      "collective": 50,
+      "symptom": 42,
+      "agent": 42,
+      "tool": 46,
+      "category": 43,
+      "cause": 40,
+      "function": 49,
+      "gender": 37,
+      "unit": 47,
+      "expert": 49,
+      "degree": 27,
+      "sequence": 36,
+      "home": 39,
+      "opposite": 47,
+      "producer": 52,
+      "part": 45,
+      "young": 41,
+      "container": 34,
+      "material": 31,
+      "study": 46,
+      "workplace": 49,
+      "sound": 32,
+      "player": 37
+    }
+  },
+  {
+    "family": "analogy",
+    "difficulty": 3,
+    "seeds": 1000,
+    "rules": {
+      "home": 38,
+      "collective": 45,
+      "sound": 32,
+      "tool": 49,
+      "adjective": 47,
+      "sequence": 42,
+      "agent": 36,
+      "expert": 49,
+      "degree": 45,
+      "player": 36,
+      "producer": 45,
+      "container": 45,
+      "study": 44,
+      "symptom": 38,
+      "material": 62,
+      "unit": 40,
+      "gender": 37,
+      "part": 43,
+      "workplace": 31,
+      "opposite": 37,
+      "category": 46,
+      "cause": 36,
+      "young": 33,
+      "function": 44
+    }
+  },
+  {
+    "family": "analogy",
+    "difficulty": 4,
+    "seeds": 1000,
+    "rules": {
+      "workplace": 41,
+      "player": 43,
+      "home": 41,
+      "cause": 39,
+      "adjective": 38,
+      "part": 61,
+      "opposite": 38,
+      "category": 43,
+      "study": 36,
+      "symptom": 37,
+      "unit": 35,
+      "producer": 44,
+      "container": 54,
+      "degree": 34,
+      "sequence": 38,
+      "gender": 38,
+      "collective": 48,
+      "agent": 28,
+      "expert": 42,
+      "material": 51,
+      "function": 50,
+      "young": 36,
+      "tool": 41,
+      "sound": 44
+    }
+  },
+  {
+    "family": "analogy",
+    "difficulty": 5,
+    "seeds": 1000,
+    "rules": {
+      "part": 69,
+      "adjective": 79,
+      "expert": 74,
+      "opposite": 95,
+      "category": 78,
+      "collective": 79,
+      "producer": 90,
+      "study": 99,
+      "tool": 85,
+      "degree": 98,
+      "young": 86,
+      "unit": 68
+    }
+  },
+  {
+    "family": "analogy",
+    "difficulty": 6,
+    "seeds": 1000,
+    "rules": {
+      "category": 87,
+      "tool": 89,
+      "study": 85,
+      "collective": 88,
+      "unit": 76,
+      "degree": 86,
+      "young": 65,
+      "producer": 94,
+      "adjective": 89,
+      "opposite": 83,
+      "expert": 87,
+      "part": 71
+    }
+  },
+  {
+    "family": "vocab",
+    "difficulty": 1,
+    "seeds": 1000,
+    "rules": {
+      "synonym": 331,
+      "antonym": 337,
+      "odd-one-out": 332
+    }
+  },
+  {
+    "family": "vocab",
+    "difficulty": 2,
+    "seeds": 1000,
+    "rules": {
+      "odd-one-out": 328,
+      "synonym": 344,
+      "antonym": 328
+    }
+  },
+  {
+    "family": "vocab",
+    "difficulty": 3,
+    "seeds": 1000,
+    "rules": {
+      "odd-one-out": 200,
+      "cloze": 406,
+      "synonym": 186,
+      "antonym": 208
+    }
+  },
+  {
+    "family": "vocab",
+    "difficulty": 4,
+    "seeds": 1000,
+    "rules": {
+      "antonym": 194,
+      "odd-one-out": 208,
+      "cloze": 391,
+      "synonym": 207
+    }
+  },
+  {
+    "family": "vocab",
+    "difficulty": 5,
+    "seeds": 1000,
+    "rules": {
+      "odd-one-out": 215,
+      "cloze": 396,
+      "antonym": 188,
+      "synonym": 201
+    }
+  },
+  {
+    "family": "vocab",
+    "difficulty": 6,
+    "seeds": 1000,
+    "rules": {
+      "cloze": 378,
+      "synonym": 190,
+      "antonym": 217,
+      "odd-one-out": 215
+    }
+  },
+  {
+    "family": "word",
+    "difficulty": 1,
+    "seeds": 1000,
+    "rules": {
+      "average": 564,
+      "speed-time": 436
+    }
+  },
+  {
+    "family": "word",
+    "difficulty": 2,
+    "seeds": 1000,
+    "rules": {
+      "reverse-percent": 314,
+      "speed-time": 292,
+      "average": 394
+    }
+  },
+  {
+    "family": "word",
+    "difficulty": 3,
+    "seeds": 1000,
+    "rules": {
+      "work-rate": 357,
+      "reverse-percent": 283,
+      "directions": 360
+    }
+  },
+  {
+    "family": "word",
+    "difficulty": 4,
+    "seeds": 1000,
+    "rules": {
+      "work-rate": 459,
+      "directions": 494,
+      "ages": 47
+    }
+  },
+  {
+    "family": "word",
+    "difficulty": 5,
+    "seeds": 1000,
+    "rules": {
+      "clock-hands": 476,
+      "directions": 460,
+      "ages": 64
+    }
+  },
+  {
+    "family": "word",
+    "difficulty": 6,
+    "seeds": 1000,
+    "rules": {
+      "clock-hands": 473,
+      "directions": 468,
+      "ages": 59
+    }
+  }
+]

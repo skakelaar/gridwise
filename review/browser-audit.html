@@ -1,0 +1,16 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Gridwise browser audit harness</title>
+<style>body{font:16px system-ui;background:#eee;color:#111}main{display:flex;gap:20px;align-items:start}iframe{width:320px;height:820px;border:1px solid #444}label{display:block} .dark{color-scheme:dark}</style>
+<h1>320 px audit frames</h1><p>Same app, separate embedded viewports. Dark frame inherits a dark colour scheme. Third frame forbids scripts.</p>
+<main><section><label>Light</label><iframe title="320 px light app" src="../index.html#/practice"></iframe></section>
+<section><label>Dark</label><iframe class="dark" title="320 px dark app" src="../index.html#/practice"></iframe></section>
+<section><label>JavaScript disabled</label><iframe title="JavaScript disabled app" sandbox="allow-same-origin" src="../index.html"></iframe></section></main>
+</html>
+<script>
+window.addEventListener('load',()=>{
+ const result=document.createElement('pre'); result.id='measurements';
+ result.textContent=[...document.querySelectorAll('iframe')].map(f=>{
+ const d=f.contentDocument,c=d.querySelector('.cell'),w=f.contentWindow;
+ return JSON.stringify({frame:f.title,width:d.documentElement.clientWidth,scrollWidth:d.documentElement.scrollWidth,colour:c&&w.getComputedStyle(c).color,background:c&&w.getComputedStyle(c).backgroundColor});
+ }).join('\n');document.querySelector('h1').after(result);
+});
+</script>

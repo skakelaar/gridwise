@@ -1,0 +1,426 @@
+{
+  "session": {
+    "kind": "mock",
+    "id": "m0",
+    "tier": "standard",
+    "minutes": 8,
+    "items": [
+      {
+        "group": "set",
+        "family": "union",
+        "difficulty": 3,
+        "seed": "rydvw2",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "verbal",
+        "family": "analogy",
+        "difficulty": 3,
+        "seed": "pxf8fg",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "arithmetic",
+        "family": "contains",
+        "difficulty": 2,
+        "seed": "5n6c33",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "combination",
+        "family": "combination",
+        "difficulty": 2,
+        "seed": "3frahp",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "logic",
+        "family": "logic",
+        "difficulty": 3,
+        "seed": "2qb2xh",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "arithmetic",
+        "family": "addition",
+        "difficulty": 2,
+        "seed": "tguxs8",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "sequence",
+        "family": "cyclic",
+        "difficulty": 3,
+        "seed": "8dg3hd",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "verbal",
+        "family": "vocab",
+        "difficulty": 2,
+        "seed": "2ekrmq",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "orientation",
+        "family": "rotation",
+        "difficulty": 2,
+        "seed": "7gs7u7",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "numeric",
+        "family": "numeric",
+        "difficulty": 3,
+        "seed": "p7ft9h",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "series",
+        "family": "series",
+        "difficulty": 2,
+        "seed": "bxg2d5",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "numeric",
+        "family": "numeric",
+        "difficulty": 2,
+        "seed": "wwxvpr",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "change",
+        "family": "fill",
+        "difficulty": 3,
+        "seed": "fkmxqy",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "series",
+        "family": "series",
+        "difficulty": 3,
+        "seed": "nw4dg6",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "numeric",
+        "family": "numeric",
+        "difficulty": 3,
+        "seed": "t7emfk",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "logic",
+        "family": "logic",
+        "difficulty": 3,
+        "seed": "7d8zzn",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "logic",
+        "family": "logic",
+        "difficulty": 3,
+        "seed": "2tjy89",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "logic",
+        "family": "logic",
+        "difficulty": 3,
+        "seed": "hzx249",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "series",
+        "family": "series",
+        "difficulty": 2,
+        "seed": "z37cjq",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "orientation",
+        "family": "mirrorRows",
+        "difficulty": 3,
+        "seed": "7nb92t",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "series",
+        "family": "series",
+        "difficulty": 3,
+        "seed": "pw5sks",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "sequence",
+        "family": "alternation",
+        "difficulty": 3,
+        "seed": "mkqmk9",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "logic",
+        "family": "logic",
+        "difficulty": 2,
+        "seed": "jyqdmz",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "verbal",
+        "family": "vocab",
+        "difficulty": 2,
+        "seed": "pb686m",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "change",
+        "family": "fill",
+        "difficulty": 3,
+        "seed": "wpjxgp",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "global",
+        "family": "invariant",
+        "difficulty": 3,
+        "seed": "dknhqh",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "global",
+        "family": "invariant",
+        "difficulty": 2,
+        "seed": "hwd4g7",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "verbal",
+        "family": "vocab",
+        "difficulty": 3,
+        "seed": "j3yd7n",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "change",
+        "family": "fill",
+        "difficulty": 2,
+        "seed": "3dwp32",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "series",
+        "family": "series",
+        "difficulty": 2,
+        "seed": "tcfpyj",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "global",
+        "family": "invariant",
+        "difficulty": 2,
+        "seed": "ewy97z",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "numeric",
+        "family": "numeric",
+        "difficulty": 2,
+        "seed": "qhbxnj",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "numeric",
+        "family": "numeric",
+        "difficulty": 2,
+        "seed": "4hfavj",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "combination",
+        "family": "combination",
+        "difficulty": 3,
+        "seed": "tmycdz",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "global",
+        "family": "path",
+        "difficulty": 3,
+        "seed": "p2yyz7",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "orientation",
+        "family": "mirrorRows",
+        "difficulty": 3,
+        "seed": "eg4w99",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "verbal",
+        "family": "vocab",
+        "difficulty": 3,
+        "seed": "ngmkcr",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "sequence",
+        "family": "alternation",
+        "difficulty": 3,
+        "seed": "uvjd5y",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "set",
+        "family": "union",
+        "difficulty": 3,
+        "seed": "52gsha",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      },
+      {
+        "group": "arithmetic",
+        "family": "subtraction",
+        "difficulty": 2,
+        "seed": "5j36rc",
+        "chosenIndex": null,
+        "correct": null,
+        "flagged": false,
+        "ms": 0
+      }
+    ],
+    "index": 0,
+    "startedAt": 0,
+    "endsAt": 480000,
+    "viewedAt": 0,
+    "finished": false,
+    "finishedAt": null,
+    "endedBy": null
+  },
+  "slots": [
+    16,
+    17
+  ],
+  "rule": "universal",
+  "prompts": [
+    "All lifeguards can swim.\nLena is not a lifeguard.",
+    "All pilots have a licence.\nMila has a licence."
+  ]
+}
