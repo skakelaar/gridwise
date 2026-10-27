@@ -47,7 +47,7 @@ function withDistractors(item, reasons = {}) {
   item.distractors = item.options.map((o, i) => (i === item.correctIndex ? null : {
     index: i,
     code: o === NONE ? 'none-when-forced' : reasons[o] ? 'named-fallacy' : 'not-forced',
-    text: reasons[o] || (o === NONE ? `claims nothing follows, but one conclusion is forced: ${answer}` : 'may well be true, but the statements do not force it'),
+    text: reasons[o] || (o === NONE ? `claims nothing follows, but one conclusion is forced: ${answer}` : 'is not forced by the statements'),
   }));
   return item;
 }
@@ -270,7 +270,7 @@ function conditionalChain(difficulty, rng) {
   const first = `If ${a.cond}, then ${b.cond}.`;
   const second = `If ${b.cond}, then ${c.cond}.`;
   const variants = [
-    { third: `${c.notPast}.`, answer: a.notPast, also: [b.notPast], why: `Had ${a.cond}, then ${b.cond}, and then ${c.cond}. The last of these did not happen, so neither of the earlier ones can have: the chain runs backwards from a failed consequence.` },
+    { third: `${c.notPast}.`, answer: a.notPast, also: [b.notPast], why: `If ${a.cond}, then ${b.cond}, and then ${c.cond}. The last of these did not happen, so neither of the earlier ones can have: the chain runs backwards from a failed consequence.` },
     { third: `${a.past}.`, answer: c.past, also: [b.past], why: `${a.past}, so ${b.cond}; and because ${b.cond}, ${c.cond}. The chain runs forwards from a condition that held.` },
     { third: `${c.past}.`, answer: NONE, why: `Affirming the consequent: "${c.past}" may have come about without ${b.cond}, and ${b.cond} without ${a.cond}. The rules only run forwards, so nothing is forced.` },
     { third: `${b.notPast}.`, answer: a.notPast, why: `${b.notPast}, so its condition cannot have held: ${a.notPast.charAt(0).toLowerCase()}${a.notPast.slice(1)}. Nothing follows about whether ${c.cond}, which may have other causes.` },
@@ -286,7 +286,7 @@ function conditionalChain(difficulty, rng) {
   const reasons = {};
   for (const o of pool) {
     if (neg[o] === given) reasons[o] = 'contradicts the third statement';
-    else if (v.answer !== NONE && neg[o] === v.answer) reasons[o] = `contradicts what the statements force: ${v.answer.charAt(0).toLowerCase()}${v.answer.slice(1)}`;
+    else if (v.answer !== NONE && [v.answer, ...(v.also || [])].includes(neg[o])) reasons[o] = `contradicts what the statements force: ${v.answer.charAt(0).toLowerCase()}${v.answer.slice(1)}`;
     else if (given === c.past && (o === a.past || o === b.past)) reasons[o] = `affirms the consequent: ${c.cond} can come about without it`;
     else if (given === b.notPast && (o === c.past || o === c.notPast)) reasons[o] = `is not forced: with ${b.notPast.charAt(0).toLowerCase()}${b.notPast.slice(1)}, the second rule says nothing either way`;
     else if (given === c.notPast && o === a.past) reasons[o] = `would mean that ${b.cond} and then ${c.cond}, which the third statement rules out`;

@@ -142,6 +142,12 @@ test('every logic item: the answer is entailed and no other option is, under fou
         const entailed = item.options.filter((o) => o !== NONE).filter((o) => { const p = parseProp(o); assert.ok(p, `${item.id}: unparsed option ${o}`); return propEntails(prem, p); });
         if (answer === NONE) assert.deepEqual(entailed, [], `${item.id}: ${entailed.join(' / ')} follows but answer is NONE`);
         else assert.deepEqual(entailed, [answer], `${item.id}: entailed options ${entailed.join(' / ')} vs answer ${answer}`);
+        for (const d of item.distractors.filter(Boolean)) {
+          const c = parseProp(item.options[d.index]); if (!c || c.imp) continue;
+          const contradicted = propEntails(prem, {...c,neg:!c.neg});
+          if (d.text.startsWith('contradicts')) assert.ok(contradicted, item.id);
+          if (contradicted) assert.doesNotMatch(d.text,/may well be true/, item.id);
+        }
         propItems++;
       } else {
         const prem = lines.map(parseClass);
