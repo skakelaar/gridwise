@@ -353,7 +353,7 @@ function renderTimedPuzzle(t, { focus } = {}) {
       }
       const attempt = session.timedAnswer(t, selected);
       if (attempt) recordAttempt(puzzle, attempt);
-      advance('Answer recorded.');
+      advance(attempt ? 'Answer recorded.' : 'Time ran out before the answer was recorded.');
     },
     onSkip: () => { session.timedSkip(t); advance('Skipped.'); },
     onStop: () => endTimed(t, 'stopped'),
@@ -486,7 +486,7 @@ function renderChallengePuzzle(c, { focus } = {}) {
       }
       const attempt = challenge.challengeAnswer(c, selected);
       if (attempt) recordAttempt(puzzle, attempt);
-      advance('Answer recorded.');
+      advance(attempt ? 'Answer recorded.' : 'Time ran out before the answer was recorded.');
     },
     onStop: () => endChallenge(c, 'stopped'),
   };
@@ -611,7 +611,7 @@ function renderMockQuestion(m, { focus } = {}) {
   const item = m.items[m.index];
   const goTo = (i) => { mock.mockGoTo(m, i); persistMock(); renderMockQuestion(m, { focus: 'title' }); ui.announce(`Question ${m.index + 1} of ${m.items.length}.`); };
   const handlers = {
-    onSelect: (i) => { mock.mockAnswer(m, i); persistMock(); ui.setSelectedOption(app, i); },
+    onSelect: (i) => { mock.mockAnswer(m, i); if (m.finished) return endMock(m, 'time'); persistMock(); ui.setSelectedOption(app, i); },
     onSubmit: () => {
       if (m.index < m.items.length - 1) goTo(m.index + 1);
       else { document.getElementById('finish-btn')?.focus(); ui.announce('This is the last question. Press Finish to end the test, or go back to a saved question.'); }

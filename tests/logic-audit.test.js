@@ -25,3 +25,13 @@ test('logic questions explicitly settle existential and one-way readings',()=>{
  if(/^(All|No) /.test(p.prompt))assert.match(p.question,/without exceptions/);
  }
 });
+
+test('adjacent logic templates get a deterministic persisted seed variation',async()=>{
+ const {avoidRepeatedLogicTemplate,puzzleFor}=await import('../src/app/session.js');
+ const items=[1,2].map(i=>({family:'logic',difficulty:3,seed:`variety-${i}`}));
+ assert.equal(puzzleFor(items[0]).features.rule,puzzleFor(items[1]).features.rule);
+ avoidRepeatedLogicTemplate(items,1);
+ assert.notEqual(puzzleFor(items[0]).features.rule,puzzleFor(items[1]).features.rule);
+ const saved=JSON.parse(JSON.stringify(items));avoidRepeatedLogicTemplate(saved,1);
+ assert.deepEqual(saved,items);
+});

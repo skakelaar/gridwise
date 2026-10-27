@@ -2,7 +2,7 @@
 // can be flagged for later and answers changed until "I am finished" or the clock runs out. Not adaptive.
 // Practice format only: it does not reproduce any publisher's test, timing, scoring or norms.
 import { randomSeed, GROUPS, FAMILIES, FAMILY_IDS, ITEM_FAMILIES, ITEM_FAMILY_IDS } from '../engine/index.js';
-import { puzzleFor, makeAttempt } from './session.js';
+import { puzzleFor, makeAttempt, avoidRepeatedLogicTemplate } from './session.js';
 
 export const MOCK_TIERS = {
   standard: { id: 'standard', label: 'Standard (levels 2–3)', levels: [2, 3] },
@@ -35,6 +35,7 @@ export function createMock({ count = MOCK_DEFAULTS.count, minutes = MOCK_DEFAULT
     const difficulty = levels[Math.floor(random() * levels.length)];
     return { group, family, difficulty, seed: randomSeed(), chosenIndex: null, correct: null, flagged: false, ms: 0 };
   });
+  for (let i = 1; i < items.length; i++) avoidRepeatedLogicTemplate(items, i);
   return {
     kind: 'mock',
     id: `m${now.toString(36)}`,
@@ -69,7 +70,8 @@ export function mockGoTo(m, i, now = Date.now()) {
   return m;
 }
 
-export function mockAnswer(m, chosenIndex) {
+export function mockAnswer(m, chosenIndex, now = Date.now()) {
+  if (now >= m.endsAt) return finishMock(m, 'time', m.endsAt);
   if (m.finished) return m;
   const item = m.items[m.index];
   item.chosenIndex = chosenIndex;

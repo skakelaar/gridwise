@@ -17,7 +17,7 @@ test('challenge has twelve slots covering every rule group and starts at level 3
   assert.equal(puzzleDeadline(c), 1000 + 60 * 1000);
 });
 
-test('staircase moves one level per answer within 1..4 and timeouts count as misses', () => {
+test('staircase moves one level per answer within 1..6 and timeouts count as misses', () => {
   const c = createChallenge({ now: 0, random: seededRandom('b') });
   let now = 0;
   const answer = (correct) => {

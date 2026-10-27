@@ -199,6 +199,7 @@ export function timedCurrent(t) {
 
 /** Record the answer for the current timed puzzle and advance. Returns the attempt record. */
 export function timedAnswer(t, chosenIndex, now = Date.now()) {
+  if (now >= t.endsAt) { finishTimed(t, 'time', t.endsAt); return null; }
   const cur = timedCurrent(t);
   if (!cur) return null;
   const { item, puzzle } = cur;
@@ -211,6 +212,7 @@ export function timedAnswer(t, chosenIndex, now = Date.now()) {
 }
 
 export function timedSkip(t, now = Date.now()) {
+  if (now >= t.endsAt) { finishTimed(t, 'time', t.endsAt); return; }
   const cur = timedCurrent(t);
   if (!cur) return;
   cur.item.skipped = true;
@@ -245,4 +247,18 @@ export function timedSummary(t) {
     limitMs: t.minutes * 60 * 1000,
     endedBy: t.endedBy,
   };
+}
+
+/** Avoid repeating a logic template in adjacent slots, without changing family or level.
+ * Persist the replacement seed so reloads and reports use exactly the chosen variant. */
+export function avoidRepeatedLogicTemplate(items, index) {
+  const before = items[index - 1], item = items[index];
+  if (before?.family !== 'logic' || item?.family !== 'logic' || item.difficulty == null) return;
+  const previous = puzzleFor(before).features.rule;
+  if (puzzleFor(item).features.rule !== previous) return;
+  const seed = item.seed;
+  for (let attempt = 1; attempt <= 64; attempt++) {
+    const candidate = {...item, seed: `${seed}:variety:${attempt}`};
+    if (puzzleFor(candidate).features.rule !== previous) { item.seed = candidate.seed; return; }
+  }
 }

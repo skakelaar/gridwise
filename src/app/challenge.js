@@ -3,7 +3,7 @@
 // staircase). This is a practice format; it does not reproduce any publisher's adaptive algorithm, item bank,
 // scoring or norms. Pure state functions, serialisable (ids and seeds only), no DOM.
 import { randomSeed, GROUPS, FAMILIES, FAMILY_IDS, ITEM_FAMILIES, ITEM_FAMILY_IDS, ALL_GROUPS, MAX_DIFFICULTY } from '../engine/index.js';
-import { puzzleFor, makeAttempt } from './session.js';
+import { puzzleFor, makeAttempt, avoidRepeatedLogicTemplate } from './session.js';
 
 export const CHALLENGE = {
   count: 12,
@@ -30,7 +30,7 @@ function shuffle(arr, random) {
   return a;
 }
 
-/** Twelve slots: every rule group twice, in a shuffled order, each with its own seed. The level is decided as play proceeds. */
+/** Slots cycle the group list (with global repeated), then shuffle; each has its own seed. The level is decided as play proceeds. */
 export function createChallenge({ format = 'matrix', now = Date.now(), random = Math.random } = {}) {
   const fmt = CHALLENGE_FORMATS[format] || CHALLENGE_FORMATS.matrix;
   const groups = [...Object.keys(GROUPS), 'global']; // whole-matrix patterns count double
@@ -67,7 +67,7 @@ export function createChallenge({ format = 'matrix', now = Date.now(), random = 
 
 function assignLevel(c) {
   const item = c.items[c.index];
-  if (item && item.difficulty == null) { item.difficulty = c.level; item.level = c.level; }
+  if (item && item.difficulty == null) { item.difficulty = c.level; item.level = c.level; avoidRepeatedLogicTemplate(c.items, c.index); }
 }
 
 export function secondsPer(c) { return c.seconds || CHALLENGE.secondsPerPuzzle; }
@@ -96,6 +96,8 @@ function advance(c, now) {
 
 /** Record the answer for the current puzzle, move the level and advance. Returns the attempt record. */
 export function challengeAnswer(c, chosenIndex, now = Date.now()) {
+  // A key event can precede a delayed interval callback after the absolute deadline.
+  if (catchUp(c, now)) return null;
   const cur = challengeCurrent(c);
   if (!cur) return null;
   const { item, puzzle } = cur;

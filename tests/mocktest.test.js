@@ -18,9 +18,9 @@ test('mock test: balanced slots, fixed levels from the tier, one clock', () => {
 
 test('mock test: navigation, flags, changing answers, time accounting and report', () => {
   const m = createMock({ count: 8, minutes: 5, tier: 'standard', now: 0, random: seededRandom('mk2') });
-  mockAnswer(m, (mockPuzzle(m).correctIndex + 1) % mockPuzzle(m).options.length);
+  mockAnswer(m, (mockPuzzle(m).correctIndex + 1) % mockPuzzle(m).options.length, 0);
   assert.equal(m.items[0].correct, false);
-  mockAnswer(m, mockPuzzle(m).correctIndex); // change of mind
+  mockAnswer(m, mockPuzzle(m).correctIndex, 0); // change of mind
   assert.equal(m.items[0].correct, true);
   assert.equal(mockToggleFlag(m), true);
   mockGoTo(m, 3, 10000);
@@ -38,4 +38,16 @@ test('mock test: navigation, flags, changing answers, time accounting and report
   assert.equal(r.adaptive, false);
   assert.equal(r.answered, 1);
   assert.ok(assessmentText(r).join(' ').includes('Levels ranged'));
+});
+
+test('mock time accounting survives serialisation and repeated finish calls',()=>{
+ let m=createMock({count:6,minutes:1,now:0,random:seededRandom('reload')});
+ mockGoTo(m,1,10000);
+ m=JSON.parse(JSON.stringify(m));
+ mockGoTo(m,0,25000);
+ assert.equal(m.items[0].ms,10000); assert.equal(m.items[1].ms,15000);
+ finishMock(m,'time',90000);
+ assert.equal(m.items[0].ms,45000);
+ finishMock(m,'finished',100000);
+ assert.equal(m.items.reduce((sum,i)=>sum+i.ms,0),60000);
 });
