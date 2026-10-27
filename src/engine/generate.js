@@ -536,6 +536,10 @@ function buildSetPuzzle(family, fam, difficulty, rng) {
   // five options sharing the opposite value. Reverse-reading filters can otherwise
   // leave an unbalanced cluster even when the original recipe was balanced.
   if (elements.some(e => options.cells.filter(c => c.members.includes(e) === answer.members.includes(e)).length === 1)) return null;
+  const frequencies = elements.map(e => options.cells.filter(c => c.members.includes(e)).length);
+  const votes = options.cells.map(c => elements.reduce((score,e,i) => score +
+    ((c.members.includes(e) && frequencies[i] > 3) || (!c.members.includes(e) && frequencies[i] < 3) ? 1 : 0), 0));
+  if (votes.every((score,i) => i === options.correctIndex || score < votes[options.correctIndex])) return null;
   return finish({
     kind: 'set',
     setRule: { op, orientation: colOp ? 'row' : orientation, palette, opLabel: fam.framing === 'contains' ? 'contains' : OP_TEXT[op].name, colOp, framing: fam.framing || null },

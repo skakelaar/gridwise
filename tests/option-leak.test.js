@@ -14,6 +14,7 @@ test('frozen invariant audit-0 reproduces the former component-vote leak',async(
 test('set distractor filtering cannot leave the answer alone in an element value',()=>{
  for(const family of ['addition','subtraction','contains','union','intersection','xor','neither'])for(let difficulty=1;difficulty<=6;difficulty++)for(let i=0;i<100;i++){
  const p=generatePuzzle({family,difficulty,seed:`audit-${i}`});
+ assert.notEqual(majorityPick(p),p.correctIndex,p.id);
  for(const e of new Set(p.options.flatMap(o=>o.members)))assert.notEqual(p.options.filter(o=>o.members.includes(e)===p.cells[8].members.includes(e)).length,1,p.id+': '+e);
  }
 });
