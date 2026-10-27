@@ -66,7 +66,7 @@ function clockHands(rng) {
   const frac = 60 * h - whole * 11; // numerator over 11
   const fmt = (v) => (typeof v === 'string' ? v : v);
   const ans = `${h}:${String(whole).padStart(2, '0')} and ${frac}/11 min`;
-  const wrongs = [`${h}:${String(whole).padStart(2, '0')}`, `${h}:${String(h * 5).padStart(2, '0')}`, `${h}:${String(whole + 1).padStart(2, '0')} and ${frac}/11 min`, `${h}:${String(whole).padStart(2, '0')} and ${(frac + 3) % 11}/11 min`, `${h}:30`];
+  const wrongs = [`${h}:${String(whole).padStart(2, '0')}`, `${h}:${String(h * 5).padStart(2, '0')}`, `${h}:${String(whole + 1).padStart(2, '0')} and ${frac}/11 min`, `${h}:${String(whole).padStart(2, '0')} and ${(frac + 3) % 11}/11 min`, `${h}:30`, `${h}:${String(whole - 1).padStart(2, '0')}`].map(s => s.replace(' and 0/11 min', ''));
   const opts = [ans, ...rng.shuffle([...new Set(wrongs.filter((w) => w !== ans))]).slice(0, 4)];
   if (opts.length < 5) return null;
   const order = rng.shuffle(opts.map((_, i) => i));

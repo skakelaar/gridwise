@@ -121,10 +121,10 @@ export const RELATIONS = [
     [4, 'anxiety', 'palpitation'], [4, 'guilt', 'sleeplessness'], [4, 'dehydration', 'delirium'], [4, 'hypothermia', 'shivering'], [4, 'grief', 'lamentation'],
   ] },
   { id: 'unit', text: 'the second is a unit for measuring the first', pairs: [
-    [1, 'length', 'metre'], [1, 'time', 'minute'], [1, 'weight', 'kilogram'],
+    [1, 'length', 'metre'], [1, 'time', 'minute'], [1, 'mass', 'kilogram'],
     [2, 'temperature', 'degree'], [2, 'area', 'hectare'], [2, 'volume', 'litre'], [2, 'speed', 'knot'], [2, 'angle', 'radian'],
     [3, 'pressure', 'pascal'], [3, 'energy', 'joule'], [3, 'frequency', 'hertz'], [3, 'power', 'watt'], [3, 'force', 'newton'], [3, 'depth', 'fathom'],
-    [4, 'luminosity', 'candela'], [4, 'charge', 'coulomb'], [4, 'resistance', 'ohm'], [4, 'radioactivity', 'becquerel'], [4, 'loudness', 'decibel'],
+    [4, 'luminous intensity', 'candela'], [4, 'charge', 'coulomb'], [4, 'resistance', 'ohm'], [4, 'radioactivity', 'becquerel'], [4, 'loudness', 'decibel'],
     [5, 'inductance', 'henry'], [5, 'capacitance', 'farad'], [5, 'magnetic flux', 'weber'], [5, 'absorbed dose', 'gray'], [5, 'catalytic activity', 'katal'],
   ] },
   { id: 'container', text: 'the second is what the first is usually kept in', pairs: [
