@@ -16,6 +16,15 @@ test('split audit-18: row endpoints supply a second lawful answer', () => {
   }
 });
 
+test('mirrorRows audit-0: reflection XOR plus column turns supplies a second complete reading',async()=>{
+ const {default:p}=await import('./fixtures/mirrorRows-1-audit-0.json',{with:{type:'json'}});
+ assert.equal(solveIndependently(p).ambiguous,true);
+ const readings=predictAttribute({kind:'categorical',values:[0,1],binaryXor:true},[[0,0,1],[0,0,1],[0,0,null]]);
+ assert.ok(readings.has(0));assert.ok(readings.has(1));
+ const repaired=generatePuzzle({family:'mirrorRows',difficulty:1,seed:'audit-0'});
+ assert.equal(solveIndependently(repaired).ambiguous,false);
+});
+
 test('rotation audit-185: column angle addition gives a second fully consistent option', async () => {
   const {default:p}=await import('./fixtures/rotation-1-audit-185.json',{with:{type:'json'}});
   assert.equal(p.cells[8].rot,2);

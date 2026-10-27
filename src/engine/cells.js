@@ -12,7 +12,7 @@ export function makeDomains(shapeSet, innerSet = ['none']) {
     size:  { kind: 'ordered', values: ['small', 'medium', 'large'], label: 'size', steps: [1, -1] },
     count: { kind: 'ordered', values: [1, 2, 3, 4, 5], label: 'number of shapes', steps: [1, -1, 2, -2], arith: true },
     rot:   { kind: 'cyclic', values: [0, 1, 2, 3, 4, 5, 6, 7], label: 'rotation', steps: [1, -1, 2, -2, 3, -3] },
-    flip:  { kind: 'categorical', values: [0, 1], label: 'reflection' },
+    flip:  { kind: 'categorical', values: [0, 1], label: 'reflection', binaryXor: true },
     x:     { kind: 'ordered', values: [0, 1, 2], label: 'horizontal position', steps: [1, -1] },
     y:     { kind: 'ordered', values: [0, 1, 2], label: 'vertical position', steps: [1, -1] },
   };

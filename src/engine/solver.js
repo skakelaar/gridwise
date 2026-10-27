@@ -32,6 +32,11 @@ export function predictAttribute(domain, known) {
     if ([0, 1].every(r => sum(known[r][0], known[r][1]) === known[r][2])) add('rowSumMod', sum(known[2][0], known[2][1]));
     if ([0, 1].every(c => sum(known[0][c], known[1][c]) === known[2][c])) add('colSumMod', sum(known[0][2], known[1][2]));
   }
+  // Reflection composition: two reflections cancel, exactly one remains reflected.
+  if (domain.binaryXor) {
+    if ([0, 1].every(r => (known[r][0] ^ known[r][1]) === known[r][2])) add('rowXor', known[2][0] ^ known[2][1]);
+    if ([0, 1].every(c => (known[0][c] ^ known[1][c]) === known[2][c])) add('colXor', known[0][2] ^ known[1][2]);
+  }
 
   // const
   if (cells.every(([, , v]) => eq(v, cells[0][2]))) add('const', cells[0][2]);

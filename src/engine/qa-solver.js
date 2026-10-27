@@ -29,7 +29,7 @@ const FIGURE_META = {
   size: { kind: 'ordered', n: 3 },
   count: { kind: 'ordered', n: 5, arithmetic: true },
   rot: { kind: 'cyclic', n: 8 },
-  flip: { kind: 'categorical' },
+  flip: { kind: 'categorical', binaryXor: true },
   x: { kind: 'ordered', n: 3 },
   y: { kind: 'ordered', n: 3 },
   inner: { kind: 'categorical' },
@@ -145,6 +145,10 @@ export function figurePatterns(grid, meta) {
   if (meta.kind === 'cyclic') {
     if (linesArith(R, (a, b) => (a + b) % meta.n)) add('rowSumMod', true);
     if (linesArith(C, (a, b) => (a + b) % meta.n)) add('colSumMod', true);
+  }
+  if (meta.binaryXor) {
+    if (linesArith(R, (a, b) => a === b ? 0 : 1)) add('rowXor', true);
+    if (linesArith(C, (a, b) => a === b ? 0 : 1)) add('colXor', true);
   }
 
   const distinct = new Set(known);
