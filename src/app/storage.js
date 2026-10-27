@@ -2,6 +2,7 @@
 // when storage is unavailable the app falls back to an in-memory map so it keeps working for the session.
 const PREFIX = 'mrt.';
 const memory = new Map();
+const pending = new Set(); // failed writes/deletions must shadow stale durable values
 let warned = false;
 
 export const KEYS = {
@@ -31,6 +32,9 @@ export const DEFAULT_SETTINGS = {
   timedMinutes: 12,
   timedFamily: 'all',
   timedDifficulty: 'mixed',
+  mockCount: 16,
+  mockMinutes: 8,
+  mockTier: 'mixed',
 };
 
 export const DEFAULT_ADAPTIVE = { level: 3, correctStreak: 0, wrongStreak: 0 };
@@ -47,6 +51,7 @@ export function storageAvailable() {
 }
 
 function rawGet(key) {
+  if (pending.has(key)) return memory.get(key) ?? null;
   try {
     const v = localStorage.getItem(PREFIX + key);
     if (v != null) return v;
@@ -60,9 +65,11 @@ function rawSet(key, value) {
   memory.set(key, value);
   try {
     localStorage.setItem(PREFIX + key, value);
+    pending.delete(key);
     return true;
   } catch {
     warned = true;
+    pending.add(key);
     return false;
   }
 }
@@ -71,8 +78,10 @@ function rawRemove(key) {
   memory.delete(key);
   try {
     localStorage.removeItem(PREFIX + key);
+    pending.delete(key);
   } catch {
     warned = true;
+    pending.add(key);
   }
 }
 
@@ -101,6 +110,7 @@ export function storageWarned() {
 /** Remove every `mrt.` key (and the memory fallback). Returns true when localStorage could be cleared. */
 export function clearAll() {
   memory.clear();
+  for (const key of Object.values(KEYS)) pending.add(key);
   try {
     const doomed = [];
     for (let i = 0; i < localStorage.length; i++) {
@@ -108,6 +118,7 @@ export function clearAll() {
       if (k && k.startsWith(PREFIX)) doomed.push(k);
     }
     doomed.forEach((k) => localStorage.removeItem(k));
+    pending.clear();
     return true;
   } catch {
     return false;
@@ -116,9 +127,26 @@ export function clearAll() {
 
 // ---------------------------------------------------------------- domain helpers
 
+function validSpec(s) {
+  return s && typeof s.family === 'string' && typeof s.seed === 'string'
+    && Number.isInteger(s.difficulty) && s.difficulty >= 1 && s.difficulty <= 6;
+}
+
+function validRecord(r) {
+  return validSpec(r) && typeof r.puzzleId === 'string' && typeof r.at === 'string'
+    && Number.isFinite(Date.parse(r.at));
+}
+
+function validSession(s, adaptive = false) {
+  return s && Array.isArray(s.items) && s.items.length > 0 && s.items.every(i =>
+    validSpec(i) || (adaptive && i && i.difficulty === null && typeof i.family === 'string' && typeof i.seed === 'string'))
+    && Number.isInteger(s.index) && s.index >= 0 && s.index <= s.items.length
+    && Number.isFinite(s.startedAt) && Number.isFinite(s.endsAt) && s.endsAt >= s.startedAt;
+}
+
 export function loadAttempts() {
   const list = read(KEYS.attempts, []);
-  return Array.isArray(list) ? list : [];
+  return Array.isArray(list) ? list.filter(validRecord) : [];
 }
 
 export function appendAttempt(attempt) {
@@ -131,7 +159,7 @@ export function appendAttempt(attempt) {
 
 export function loadMistakes() {
   const list = read(KEYS.mistakes, []);
-  return Array.isArray(list) ? list : [];
+  return Array.isArray(list) ? list.filter(validRecord) : [];
 }
 
 /** Insert or refresh a mistake entry; one entry per puzzle id. */
@@ -154,13 +182,25 @@ export function findMistake(puzzleId) {
 
 export function loadSettings() {
   const stored = read(KEYS.settings, {});
-  return { ...DEFAULT_SETTINGS, ...(stored && typeof stored === 'object' ? stored : {}) };
+  const next = { ...DEFAULT_SETTINGS };
+  if (!stored || typeof stored !== 'object') return next;
+  for (const key of Object.keys(next)) {
+    const value = stored[key];
+    if (key === 'testFormat') { if (['mock', 'challenge', 'timed'].includes(value)) next[key] = value; }
+    else if (key === 'mockTier') { if (['standard', 'higher', 'master', 'mixed'].includes(value)) next[key] = value; }
+    else if (key.endsWith('Difficulty')) { if (['mixed', '1', '2', '3', '4', '5', '6'].includes(String(value))) next[key] = String(value); }
+    else if (key === 'practiceClock') { if (['off', '30', '45', '60', '90'].includes(String(value))) next[key] = String(value); }
+    else if (key.endsWith('Count')) { if (Number.isInteger(value) && value >= 5 && value <= 40) next[key] = value; }
+    else if (key.endsWith('Minutes')) { if (Number.isFinite(value) && value >= 1 && value <= 60) next[key] = value; }
+    else if (typeof value === typeof next[key]) next[key] = value;
+  }
+  return next;
 }
 
 export function saveSettings(patch) {
   const next = { ...loadSettings(), ...patch };
   write(KEYS.settings, next);
-  return next;
+  return loadSettings();
 }
 
 export function loadAdaptive() {
@@ -175,7 +215,7 @@ export function saveAdaptive(state) {
 
 export function loadTimed() {
   const t = read(KEYS.timed, null);
-  return t && typeof t === 'object' && Array.isArray(t.items) ? t : null;
+  return validSession(t) ? t : null;
 }
 
 export function saveTimed(session) {
@@ -188,7 +228,7 @@ export function clearTimed() {
 
 export function loadChallenge() {
   const c = read(KEYS.challenge, null);
-  return c && typeof c === 'object' && Array.isArray(c.items) ? c : null;
+  return validSession(c, true) ? c : null;
 }
 
 export function saveChallenge(c) {
@@ -201,7 +241,7 @@ export function clearChallenge() {
 
 export function loadChallengeHistory() {
   const list = read(KEYS.challengeHistory, []);
-  return Array.isArray(list) ? list : [];
+  return Array.isArray(list) ? list.filter(c => validSession(c, true)) : [];
 }
 
 /** Store a finished challenge so its report can be reopened later. */
@@ -218,11 +258,11 @@ export function findChallenge(id) {
 
 export function loadMock() {
   const m = read(KEYS.mock, null);
-  return m && typeof m === 'object' && Array.isArray(m.items) ? m : null;
+  return validSession(m) ? m : null;
 }
 export function saveMock(m) { write(KEYS.mock, m); }
 export function clearMock() { remove(KEYS.mock); }
-export function loadMockHistory() { const list = read(KEYS.mockHistory, []); return Array.isArray(list) ? list : []; }
+export function loadMockHistory() { const list = read(KEYS.mockHistory, []); return Array.isArray(list) ? list.filter(m => validSession(m)) : []; }
 export function archiveMock(m) {
   const list = loadMockHistory().filter((x) => x.id !== m.id);
   list.push(m);
