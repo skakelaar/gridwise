@@ -9,6 +9,7 @@ import * as ui from './ui.js';
 import { createCountdown } from './timer.js';
 import * as challenge from './challenge.js';
 import * as mock from './mocktest.js';
+import { savedPuzzle } from './replay.js';
 import { summarise, byGroup, byDifficulty, formatClock } from './stats.js';
 
 const app = document.getElementById('app');
@@ -49,6 +50,7 @@ let teardown = null; // cleanup for the active screen (timers, listeners)
 function mount(element, { title, focusTitle = true } = {}) {
   if (teardown) { teardown(); teardown = null; }
   ui.clear(app);
+  if (storage.storageWarned()) app.appendChild(ui.renderStorageNotice());
   app.appendChild(element);
   document.title = title ? `${title} – ${PRODUCT_NAME}` : PRODUCT_NAME;
   if (focusTitle) ui.focusEl(element.querySelector('#screen-title'));
@@ -84,7 +86,9 @@ function route() {
 function recordAttempt(puzzle, attempt, { addMistake = true } = {}) {
   storage.appendAttempt(attempt);
   if (addMistake && !attempt.correct && attempt.chosenIndex != null) {
-    storage.upsertMistake(session.makeMistake(puzzle, { chosenIndex: attempt.chosenIndex, at: Date.parse(attempt.at), mode: attempt.mode }));
+    storage.upsertMistake(puzzle
+      ? session.makeMistake(puzzle, { chosenIndex: attempt.chosenIndex, at: Date.parse(attempt.at), mode: attempt.mode })
+      : attempt); // legacy mock: retain its recorded result without fabricating a question
   }
 }
 
@@ -399,7 +403,8 @@ function showTimedReview(index) {
   if (!t || !t.finished) return navigate('#/timed', { replace: true });
   const item = t.items[index];
   if (!item) return mount(ui.renderNotFound(), { title: 'Not found' });
-  const puzzle = session.puzzleFor(item);
+  const puzzle = savedPuzzle(item);
+  if (!puzzle) return mount(ui.renderReplayUnavailable(item, '#/timed/summary'), { title: 'Question unavailable' });
   const model = {
     puzzle,
     mode: 'summary',
@@ -558,7 +563,7 @@ function finaliseMock(m) {
     for (const attempt of mock.mockAttempts(m, m.finishedAt || Date.now())) {
       const item = m.items.find((i) => i.seed === attempt.seed && i.family === attempt.family);
       const puzzle = safePuzzle(item);
-      if (puzzle) recordAttempt(puzzle, attempt);
+      recordAttempt(puzzle, attempt);
     }
   }
   storage.archiveMock(m);
@@ -566,9 +571,9 @@ function finaliseMock(m) {
   mockState = null;
 }
 
-/** Regenerate a stored item from its seed; null (rather than a crash) when the engine no longer produces it. */
+/** Historical replay never calls the current generator. */
 function safePuzzle(item) {
-  try { return item ? session.puzzleFor(item) : null; } catch (err) { console.error(err); return null; }
+  return savedPuzzle(item);
 }
 
 function showMock(parts) {
@@ -676,6 +681,7 @@ function sortedMistakes() {
 function showReviewPuzzle(puzzleId) {
   const mistake = storage.findMistake(puzzleId);
   if (!mistake) return mount(ui.renderError('That mistake is no longer in your list (it may have been marked as understood).'), { title: 'Mistake review' });
+  if (!savedPuzzle(mistake)) return mount(ui.renderReplayUnavailable(mistake, '#/results/mistakes'), { title: 'Question unavailable' });
   const spec = { family: mistake.family, difficulty: mistake.difficulty, seed: mistake.seed };
   let s = session.startPuzzle({ mode: 'review', spec, original: mistake });
   const render = ({ focus } = {}) => {

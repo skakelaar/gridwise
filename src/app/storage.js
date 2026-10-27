@@ -1,5 +1,6 @@
 // Persistence layer. Every key is prefixed with `mrt.` and every localStorage call is wrapped in try/catch;
 // when storage is unavailable the app falls back to an in-memory map so it keeps working for the session.
+import { protectSession } from './replay.js';
 const PREFIX = 'mrt.';
 const memory = new Map();
 const pending = new Set(); // failed writes/deletions must shadow stale durable values
@@ -7,7 +8,7 @@ let warned = false;
 
 export const KEYS = {
   attempts: 'attempts',   // attempt log, oldest first
-  mistakes: 'mistakes',   // mistakes, oldest first (ids + seeds only)
+  mistakes: 'mistakes',   // mistakes, oldest first (snapshots; legacy records retained)
   settings: 'settings',   // user settings
   adaptive: 'adaptive',   // practice personalisation state
   timed: 'timed',         // in-progress or last finished timed session
@@ -214,8 +215,16 @@ export function saveAdaptive(state) {
 }
 
 export function loadTimed() {
-  const t = read(KEYS.timed, null);
-  return validSession(t) ? t : null;
+  return loadSession(KEYS.timed);
+}
+
+function loadSession(key, adaptive = false) {
+  const value = read(key, null);
+  if (!validSession(value, adaptive)) return null;
+  const finished = value.finished;
+  protectSession(value);
+  if (!finished && value.finished) write(key, value);
+  return value;
 }
 
 export function saveTimed(session) {
@@ -227,8 +236,7 @@ export function clearTimed() {
 }
 
 export function loadChallenge() {
-  const c = read(KEYS.challenge, null);
-  return validSession(c, true) ? c : null;
+  return loadSession(KEYS.challenge, true);
 }
 
 export function saveChallenge(c) {
@@ -257,8 +265,7 @@ export function findChallenge(id) {
 }
 
 export function loadMock() {
-  const m = read(KEYS.mock, null);
-  return validSession(m) ? m : null;
+  return loadSession(KEYS.mock);
 }
 export function saveMock(m) { write(KEYS.mock, m); }
 export function clearMock() { remove(KEYS.mock); }

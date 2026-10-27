@@ -66,6 +66,19 @@ export function renderCell(cell, opts = {}) {
   return `<svg class="${className}" viewBox="0 0 100 100" width="${size}" height="${size}"${aria} focusable="false">${defs}${body}</svg>`;
 }
 
+/** Resolve the two engine-owned geometry tables into saved cell data. Version-1
+ * replay must not reinterpret these cells after a palette/variant table changes. */
+export function snapshotCell(cell) {
+  if (cell.kind === 'set' && cell.palette !== 'lines') {
+    return { ...cell, dotElements: [...(cell.dotElements ?? SET_PALETTES.dots.elements)] };
+  }
+  if (cell.kind === 'split') {
+    const lines = cell.lines ?? (SPLIT_VARIANTS[cell.sections] || []).find(v => v.id === cell.variant)?.lines ?? [];
+    return { ...cell, lines: lines.map(line => [...line]) };
+  }
+  return cell;
+}
+
 function renderFigure(cell, id) {
   const layout = LAYOUTS[cell.count] || LAYOUTS[1];
   let scale = SIZE_SCALE[cell.size] * LAYOUT_SCALE[cell.count];
@@ -120,7 +133,7 @@ function renderSet(cell) {
     if (members.has('dot')) out += '<circle cx="50" cy="50" r="7" fill="currentColor"/>';
     return out;
   }
-  const els = SET_PALETTES.dots.elements;
+  const els = cell.dotElements ?? SET_PALETTES.dots.elements;
   let out = '<g fill="currentColor">';
   // faint frame so empty regions still read as part of a grid
   out += '<rect x="12" y="12" width="76" height="76" rx="6" fill="none" stroke="currentColor" stroke-opacity="0.18" stroke-width="1.5"/>';
@@ -158,7 +171,7 @@ function renderSplit(cell) {
   const v = (SPLIT_VARIANTS[cell.sections] || []).find((x) => x.id === cell.variant);
   let out = '<rect x="10" y="10" width="80" height="80" fill="var(--cell-bg,#fff)" stroke="currentColor" stroke-width="3"/>';
   out += '<g stroke="currentColor" stroke-width="3" stroke-linecap="round">';
-  for (const [x1, y1, x2, y2] of (v ? v.lines : [])) out += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+  for (const [x1, y1, x2, y2] of (cell.lines ?? (v ? v.lines : []))) out += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
   return out + '</g>';
 }
 

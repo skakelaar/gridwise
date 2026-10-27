@@ -1,6 +1,7 @@
 // Session state: which puzzle is up, what the user did, and how the next puzzle is chosen.
 // No DOM and no storage here; the app layer only calls generatePuzzle from the engine.
 import { generateAny, randomSeed, FAMILY_IDS, FAMILIES, ITEM_FAMILY_IDS, ITEM_FAMILIES, ALL_GROUPS, familyInfo } from '../engine/index.js';
+import { capturePuzzle, requireSavedPuzzle, SNAPSHOT_VERSION } from './replay.js';
 
 export const RECENT_WINDOW = 30; // attempts counted as "recent" by practice personalisation
 
@@ -83,7 +84,8 @@ export function updateAdaptive(adaptive, correct) {
 // ---------------------------------------------------------------- single-puzzle session (guided / untimed / review)
 
 export function startPuzzle({ mode, spec, now = Date.now(), original = null }) {
-  const puzzle = generateAny(spec);
+  const puzzle = mode === 'review' ? requireSavedPuzzle(original || spec)
+    : requireSavedPuzzle({ snapshot: capturePuzzle(generateAny(spec)) });
   return {
     mode,                  // 'guided' | 'untimed' | 'review'
     spec: { family: puzzle.family, difficulty: puzzle.difficulty, seed: puzzle.seed },
@@ -127,8 +129,10 @@ export function submitAnswer(session, now = Date.now()) {
 }
 
 export function makeAttempt(puzzle, { chosenIndex, correct, ms, hintsUsed = 0, mode, at }) {
+  const snapshot = capturePuzzle(puzzle);
   return {
-    puzzleId: puzzle.id,
+    puzzleId: snapshot.key,
+    snapshot,
     family: puzzle.family,
     group: puzzle.group,
     difficulty: puzzle.difficulty,
@@ -144,8 +148,10 @@ export function makeAttempt(puzzle, { chosenIndex, correct, ms, hintsUsed = 0, m
 }
 
 export function makeMistake(puzzle, { chosenIndex, at, mode }) {
+  const snapshot = capturePuzzle(puzzle);
   return {
-    puzzleId: puzzle.id,
+    puzzleId: snapshot.key,
+    snapshot,
     family: puzzle.family,
     group: puzzle.group,
     difficulty: puzzle.difficulty,
@@ -157,7 +163,7 @@ export function makeMistake(puzzle, { chosenIndex, at, mode }) {
   };
 }
 
-// ---------------------------------------------------------------- timed sessions (serialisable: ids and seeds only)
+// ---------------------------------------------------------------- timed sessions (serialisable question snapshots)
 
 export function createTimedSession({ count, minutes, filter = 'all', difficulty = 'mixed', now = Date.now(), random = Math.random }) {
   const n = Math.min(40, Math.max(5, Math.round(Number(count) || 15)));
@@ -167,7 +173,9 @@ export function createTimedSession({ count, minutes, filter = 'all', difficulty 
     const spec = chooseSpec({ filter, difficulty, personalise: false, random });
     items.push({ ...spec, chosenIndex: null, correct: null, ms: null, skipped: false });
   }
+  items.forEach(saveQuestion);
   return {
+    snapshotVersion: SNAPSHOT_VERSION,
     count: n,
     minutes: mins,
     filter,
@@ -185,16 +193,25 @@ export function createTimedSession({ count, minutes, filter = 'all', difficulty 
 
 const puzzleCache = new Map();
 
-/** Regenerate (and cache) the puzzle for a stored spec. */
+/** Generate a NEW spec, or read an existing snapshot. Historical callers must
+ * use requireSavedPuzzle/savedPuzzle so a legacy seed can never fall through. */
 export function puzzleFor(spec) {
+  if (Object.hasOwn(spec, 'snapshot')) return requireSavedPuzzle(spec);
   const key = `${spec.family}|${spec.difficulty}|${spec.seed}`;
-  if (!puzzleCache.has(key)) puzzleCache.set(key, generateAny({ family: spec.family, difficulty: spec.difficulty, seed: spec.seed }));
-  return puzzleCache.get(key);
+  if (!puzzleCache.has(key)) puzzleCache.set(key, capturePuzzle(generateAny({ family: spec.family, difficulty: spec.difficulty, seed: spec.seed })));
+  return requireSavedPuzzle({ snapshot: puzzleCache.get(key) });
+}
+
+/** Called at question assignment, before it is displayed or persisted. */
+export function saveQuestion(spec) {
+  if (!Object.hasOwn(spec, 'snapshot')) spec.snapshot = capturePuzzle(puzzleFor(spec));
+  else requireSavedPuzzle(spec);
+  return spec;
 }
 
 export function timedCurrent(t) {
   if (t.finished || t.index >= t.items.length) return null;
-  return { item: t.items[t.index], puzzle: puzzleFor(t.items[t.index]) };
+  return { item: t.items[t.index], puzzle: requireSavedPuzzle(t.items[t.index]) };
 }
 
 /** Record the answer for the current timed puzzle and advance. Returns the attempt record. */
@@ -253,6 +270,7 @@ export function timedSummary(t) {
  * Persist the replacement seed so reloads and reports use exactly the chosen variant. */
 export function avoidRepeatedLogicTemplate(items, index) {
   const before = items[index - 1], item = items[index];
+  if (item && Object.hasOwn(item, 'snapshot')) return; // already assigned: never change history
   if (before?.family !== 'logic' || item?.family !== 'logic' || item.difficulty == null) return;
   const previous = puzzleFor(before).features.rule;
   if (puzzleFor(item).features.rule !== previous) return;

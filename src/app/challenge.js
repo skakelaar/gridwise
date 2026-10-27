@@ -1,9 +1,10 @@
 // Adaptive 12-in-12 challenge: twelve puzzles, sixty seconds each, difficulty moving one level up after a
 // correct answer and one level down after an incorrect answer or a timeout (a transparent 1-up/1-down
 // staircase). This is a practice format; it does not reproduce any publisher's adaptive algorithm, item bank,
-// scoring or norms. Pure state functions, serialisable (ids and seeds only), no DOM.
+// scoring or norms. Pure state functions, serialisable question snapshots, no DOM.
 import { randomSeed, GROUPS, FAMILIES, FAMILY_IDS, ITEM_FAMILIES, ITEM_FAMILY_IDS, ALL_GROUPS, MAX_DIFFICULTY } from '../engine/index.js';
-import { puzzleFor, makeAttempt, avoidRepeatedLogicTemplate } from './session.js';
+import { saveQuestion, makeAttempt, avoidRepeatedLogicTemplate } from './session.js';
+import { requireSavedPuzzle, SNAPSHOT_VERSION } from './replay.js';
 
 export const CHALLENGE = {
   count: 12,
@@ -47,6 +48,7 @@ export function createChallenge({ format = 'matrix', now = Date.now(), random = 
     return { group, family, seed: randomSeed(), difficulty: null, chosenIndex: null, correct: null, ms: null, timedOut: false, level: null };
   });
   const c = {
+    snapshotVersion: SNAPSHOT_VERSION,
     kind: 'challenge',
     format: fmt.id,
     seconds: fmt.seconds,
@@ -67,7 +69,12 @@ export function createChallenge({ format = 'matrix', now = Date.now(), random = 
 
 function assignLevel(c) {
   const item = c.items[c.index];
-  if (item && item.difficulty == null) { item.difficulty = c.level; item.level = c.level; avoidRepeatedLogicTemplate(c.items, c.index); }
+  if (item && item.difficulty == null) {
+    item.difficulty = c.level;
+    item.level = c.level;
+    avoidRepeatedLogicTemplate(c.items, c.index);
+    saveQuestion(item);
+  }
 }
 
 export function secondsPer(c) { return c.seconds || CHALLENGE.secondsPerPuzzle; }
@@ -80,7 +87,7 @@ export function challengeCurrent(c) {
   if (c.finished || c.index >= c.items.length) return null;
   assignLevel(c);
   const item = c.items[c.index];
-  return { item, puzzle: puzzleFor(item) };
+  return { item, puzzle: requireSavedPuzzle(item) };
 }
 
 function stepLevel(c, correct) {

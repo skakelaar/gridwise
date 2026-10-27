@@ -2,7 +2,8 @@
 // can be flagged for later and answers changed until "I am finished" or the clock runs out. Not adaptive.
 // Practice format only: it does not reproduce any publisher's test, timing, scoring or norms.
 import { randomSeed, GROUPS, FAMILIES, FAMILY_IDS, ITEM_FAMILIES, ITEM_FAMILY_IDS } from '../engine/index.js';
-import { puzzleFor, makeAttempt, avoidRepeatedLogicTemplate } from './session.js';
+import { saveQuestion, makeAttempt, avoidRepeatedLogicTemplate } from './session.js';
+import { requireSavedPuzzle, savedPuzzle, SNAPSHOT_VERSION } from './replay.js';
 
 export const MOCK_TIERS = {
   standard: { id: 'standard', label: 'Standard (levels 2–3)', levels: [2, 3] },
@@ -36,7 +37,9 @@ export function createMock({ count = MOCK_DEFAULTS.count, minutes = MOCK_DEFAULT
     return { group, family, difficulty, seed: randomSeed(), chosenIndex: null, correct: null, flagged: false, ms: 0 };
   });
   for (let i = 1; i < items.length; i++) avoidRepeatedLogicTemplate(items, i);
+  items.forEach(saveQuestion);
   return {
+    snapshotVersion: SNAPSHOT_VERSION,
     kind: 'mock',
     id: `m${now.toString(36)}`,
     tier: (MOCK_TIERS[tier] || MOCK_TIERS.mixed).id,
@@ -53,7 +56,7 @@ export function createMock({ count = MOCK_DEFAULTS.count, minutes = MOCK_DEFAULT
 }
 
 export function mockPuzzle(m, i = m.index) {
-  return puzzleFor(m.items[i]);
+  return requireSavedPuzzle(m.items[i]);
 }
 
 /** Time spent on the current question is accumulated whenever the view changes. */
@@ -96,7 +99,14 @@ export function finishMock(m, endedBy, now = Date.now()) {
 
 /** Attempt records for the log (answered questions only), produced once at the end. */
 export function mockAttempts(m, now = Date.now()) {
-  return m.items.filter((i) => i.chosenIndex != null).map((i) => makeAttempt(puzzleFor(i), { chosenIndex: i.chosenIndex, correct: i.correct, ms: i.ms || null, mode: 'mock', at: now }));
+  return m.items.filter((i) => i.chosenIndex != null).map((i) => {
+    const result = { chosenIndex: i.chosenIndex, correct: i.correct, ms: i.ms || null, mode: 'mock', at: now };
+    const puzzle = savedPuzzle(i);
+    if (puzzle) return makeAttempt(puzzle, result);
+    // Preserve legacy results without inventing a question, answer key or explanation.
+    return { ...i, ...result, puzzleId: i.puzzleId || (typeof i.snapshot?.key === 'string' ? i.snapshot.key : `legacy:${m.id}:${m.items.indexOf(i)}`),
+      at: new Date(now).toISOString(), hintsUsed: 0 };
+  });
 }
 
 export function mockProgress(m) {

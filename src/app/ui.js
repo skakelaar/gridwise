@@ -10,6 +10,7 @@ import { CHALLENGE_FORMATS, assessmentText } from './challenge.js';
 import { MOCK_TIERS, MOCK_DEFAULTS } from './mocktest.js';
 import { formatPercent, formatMs, formatClock, SMALL_SAMPLE } from './stats.js';
 import { describeFilter } from './session.js';
+import { replayStatus, replayMessage } from './replay.js';
 
 // ---------------------------------------------------------------- tiny DOM helper
 
@@ -683,7 +684,7 @@ export function renderTimedSetup({ settings, resumable, lastFinished = null }, h
 }
 
 export function renderTimedSummary({ session, summary }) {
-  const endedText = { completed: 'All puzzles answered or skipped.', time: 'Time ran out.', stopped: 'Ended early.' }[summary.endedBy] || '';
+  const endedText = { completed: 'All puzzles answered or skipped.', time: 'Time ran out.', stopped: 'Ended early.', unavailable: 'This session was ended because its saved questions cannot be resumed safely. Recorded results are unchanged.' }[summary.endedBy] || '';
   const rows = session.items.map((item, i) => {
     const puzzle = { familyLabel: familyInfo(item.family)?.label || item.family, difficultyLabel: DIFFICULTY_LABELS[item.difficulty] };
     const result = item.chosenIndex == null ? 'Unanswered' : item.correct ? 'Correct' : 'Incorrect';
@@ -694,7 +695,7 @@ export function renderTimedSummary({ session, summary }) {
       h('td', null, `${item.difficulty} – ${puzzle.difficultyLabel}`),
       h('td', null, h('span', { class: `result ${cls}` }, result)),
       h('td', null, formatMs(item.ms)),
-      h('td', null, h('a', { href: `#/timed/summary/${i}`, class: 'btn btn-small' }, `Review`, h('span', { class: 'visually-hidden' }, ` puzzle ${i + 1}`))),
+      h('td', null, h('a', { href: `#/timed/summary/${i}`, class: 'btn btn-small' }, replayStatus(item) === 'available' ? 'Review' : 'View record', h('span', { class: 'visually-hidden' }, ` puzzle ${i + 1}`))),
     );
   });
   return h('section', { class: 'screen timed-summary' },
@@ -730,10 +731,27 @@ function statTile(label, value, sub) {
 
 // ---------------------------------------------------------------- mistake review list
 
+export function renderReplayUnavailable(record, backHref) {
+  return h('section', { class: 'screen' },
+    screenTitle('Original question unavailable'),
+    h('p', { class: 'lead' }, replayMessage(record)),
+    h('p', null, `${record.family} · Level ${record.difficulty}${record.at ? ` · ${formatDate(record.at)}` : ''}`),
+    h('p', null, record.chosenIndex == null ? 'Recorded answer: unanswered.'
+      : `Recorded answer: option ${record.chosenIndex + 1}${record.correct == null ? '' : record.correct ? ' (correct)' : ' (incorrect)'}.`),
+    Number.isInteger(record.correctIndex) ? h('p', null, `Recorded answer key: option ${record.correctIndex + 1}. The original option text is unavailable.`) : null,
+    h('div', { class: 'actions' }, link(backHref, 'Back to records'), link('#/practice', 'Practise a new question')),
+  );
+}
+
+export function renderStorageNotice() {
+  return h('p', { class: 'note-small caveat', role: 'status' },
+    'Browser storage could not save or load some data. Recent questions and results may only be available in this tab and may be lost when you reload or close it.');
+}
+
 export function renderReviewList({ mistakes, embedded = false }, handlers) {
   const screen = h('section', { class: 'screen review-list' },
     embedded ? null : screenTitle('Mistake review'),
-    h('p', { class: 'lead' }, 'Puzzles you answered incorrectly, most recent first. Each one is regenerated from its seed, so you can retry it, then read the explanation and see why your earlier choice was tempting.'),
+    h('p', { class: 'lead' }, 'Puzzles you answered incorrectly, most recent first. Saved question snapshots let you retry the original question and read its explanation. Older seed-only records keep your result, but cannot reliably reproduce the original question.'),
   );
   if (!mistakes.length) {
     screen.appendChild(h('p', { class: 'empty' }, 'No mistakes stored yet. Mistakes from any mode appear here automatically.'));
@@ -747,7 +765,7 @@ export function renderReviewList({ mistakes, embedded = false }, handlers) {
         h('span', { class: 'mistake-meta' }, `${formatDate(m.at)} · ${ALL_GROUPS[m.group]?.label || ''}`),
       ),
       h('div', { class: 'mistake-actions' },
-        h('a', { class: 'btn btn-primary btn-small', href: `#/review/${encodeURIComponent(m.puzzleId)}` }, 'Retry', h('span', { class: 'visually-hidden' }, ` ${familyInfo(m.family)?.label || m.family} from ${formatDate(m.at)}`)),
+        h('a', { class: 'btn btn-primary btn-small', href: `#/review/${encodeURIComponent(m.puzzleId)}` }, replayStatus(m) === 'available' ? 'Retry' : 'View record', h('span', { class: 'visually-hidden' }, ` ${familyInfo(m.family)?.label || m.family} from ${formatDate(m.at)}`)),
         h('button', { type: 'button', class: 'btn btn-small', onClick: () => handlers.onUnderstood(m.puzzleId) }, 'Mark as understood', h('span', { class: 'visually-hidden' }, ` ${familyInfo(m.family)?.label || m.family} from ${formatDate(m.at)}`)),
       ),
     )),
@@ -928,13 +946,16 @@ function levelTrajectory(levels) {
 /** Compact answer key for one puzzle: completed matrix, the six options marked, and the explanation. */
 function answerKey(puzzle, item, index) {
   if (!puzzle) {
-    return h('details', { class: 'answer-key' },
+    const unreached = item.difficulty == null;
+    return h('details', { class: 'answer-key', open: '' },
       h('summary', null,
         h('span', { class: 'answer-key-num' }, String(index + 1).padStart(2, '0')),
-        h('span', { class: 'answer-key-title' }, `${ALL_GROUPS[item.group]?.label || item.group} · not reached`),
-        h('span', { class: 'result is-unanswered' }, 'Not reached'),
+        h('span', { class: 'answer-key-title' }, `${ALL_GROUPS[item.group]?.label || item.group} · ${unreached ? 'not reached' : 'question unavailable'}`),
+        h('span', { class: 'result is-unanswered' }, unreached ? 'Not reached' : 'Replay unavailable'),
       ),
-      h('div', { class: 'answer-key-body' }, h('p', { class: 'note-small' }, 'This puzzle was never presented, so there is nothing to explain. Its level would have depended on your previous answer.')),
+      h('div', { class: 'answer-key-body' }, h('p', { class: 'note-small' }, unreached
+        ? 'This puzzle was never presented, so there is nothing to explain. Its level would have depended on your previous answer.'
+        : replayMessage(item))),
     );
   }
   const yours = item.chosenIndex;
@@ -979,7 +1000,7 @@ export function renderChallengeReport({ challenge, report, puzzles }) {
   const fmt = isMock
     ? { label: `Mock test · ${(MOCK_TIERS[challenge.tier] || MOCK_TIERS.mixed).label} · ${challenge.items.length} questions in ${challenge.minutes} min`, rule: 'Not adaptive: every question\'s level was fixed when the test was created, so the path below simply shows the levels in order.' }
     : (CHALLENGE_FORMATS[report.format] || CHALLENGE_FORMATS.matrix);
-  const endedText = { completed: `All ${report.total} questions were presented.`, time: 'The time ran out.', stopped: 'Ended early.', finished: 'You finished before the clock ran out.' }[report.endedBy] || '';
+  const endedText = { completed: `All ${report.total} questions were presented.`, time: 'The time ran out.', stopped: 'Ended early.', finished: 'You finished before the clock ran out.', unavailable: 'This session was ended because its saved questions cannot be resumed safely. Recorded results are unchanged.' }[report.endedBy] || '';
   const memoRows = challenge.items.map((item, i) => {
     const p = puzzles[i];
     const result = item.timedOut ? 'Timed out' : item.chosenIndex == null ? (isMock ? 'Unanswered' : 'Not reached') : item.correct ? 'Correct' : 'Incorrect';
@@ -989,10 +1010,10 @@ export function renderChallengeReport({ challenge, report, puzzles }) {
       h('td', null, `${ALL_GROUPS[item.group]?.label || item.group}`, h('br'), h('span', { class: 'mistake-meta' }, familyInfo(item.family)?.label || item.family)),
       h('td', null, item.difficulty == null ? '–' : `${item.difficulty} – ${DIFFICULTY_LABELS[item.difficulty]}`),
       h('td', null, item.chosenIndex == null ? '–' : String(item.chosenIndex + 1)),
-      h('td', null, p ? String(p.correctIndex + 1) : '–'),
+      h('td', null, p ? String(p.correctIndex + 1) : Number.isInteger(item.correctIndex) ? `${item.correctIndex + 1} (recorded)` : '–'),
       h('td', null, h('span', { class: `result ${cls}` }, result)),
       h('td', null, item.chosenIndex == null ? (item.timedOut ? 'timed out' : '–') : formatMs(item.ms)),
-      h('td', null, p ? h('a', { href: `#key-${i}` }, 'See', h('span', { class: 'visually-hidden' }, ` explanation for puzzle ${i + 1}`)) : '–'),
+      h('td', null, h('a', { href: `#key-${i}` }, p ? 'See explanation' : 'View record', h('span', { class: 'visually-hidden' }, ` for puzzle ${i + 1}`))),
     );
   });
   const groupRows = report.groups.map((g) => h('tr', null,

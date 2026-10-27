@@ -3,6 +3,7 @@ export class Element {
   constructor(tag, text='') { this.tagName=tag; this.text=text; this.children=[]; this.attrs={}; this.dataset={}; }
   appendChild(child) { this.children.push(child); return child; }
   setAttribute(k,v) { this.attrs[k]=v; }
+  removeAttribute(k) { delete this.attrs[k]; }
   addEventListener() {}
   set innerHTML(value) { this.text=value; }
   set textContent(value) { this.text=value; }
