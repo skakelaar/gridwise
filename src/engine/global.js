@@ -241,6 +241,11 @@ export function buildSplit(difficulty, rng) {
   const seen = cells.slice(0, 8).map((c) => c.sections);
   const missing = [2, 3, 4].filter((n) => seen.filter((x) => x === n).length === 2);
   if (missing.length !== 1 || missing[0] !== answer.sections) return null;
+  // Section counts also admit ordinary line rules, independently of the tally.
+  const domain = { kind: 'ordered', values: [1, 2, 3, 4, 5], steps: [1, -1, 2, -2], arith: true };
+  const known = [0, 3, 6].map(i => cells.slice(i, i + 3).map(c => c.sections - 1));
+  known[2][2] = null;
+  if ([...predictAttribute(domain, known).keys()].some(v => domain.values[v] !== answer.sections)) return null;
   const wrong = [];
   for (const n of [2, 3, 4, 5]) {
     if (n === answer.sections) continue;

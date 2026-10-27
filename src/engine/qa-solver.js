@@ -156,6 +156,8 @@ export function figurePatterns(grid, meta) {
   }
   if (linesAlt(R, true)) add('rowAlt', true); else if (linesAlt(R, false)) add('rowAltOwn', false);
   if (linesAlt(C, true)) add('colAlt', true); else if (linesAlt(C, false)) add('colAltOwn', false);
+  if (R.every(l => eq(l[0], l[2]))) add('rowPalindrome', true);
+  if (C.every(l => eq(l[0], l[2]))) add('colPalindrome', true);
   {
     const ev = [], od = [];
     for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) if (grid[r][c] !== null) ((r + c) % 2 === 0 ? ev : od).push(grid[r][c]);
@@ -311,6 +313,10 @@ function evaluateGlobalOption(cells, option) {
     for (const c of all) tally.set(c.sections, (tally.get(c.sections) || 0) + 1);
     if ([...tally.values()].every((n) => n === 3)) add('three-of-each');
     if (all.every((c) => c.sections === all[0].sections)) add('const');
+    const g = [0, 3, 6].map(i => all.slice(i, i + 3).map(c => c.sections));
+    for (const p of figurePatterns(g, { kind: 'ordered', n: 6, arithmetic: true })) {
+      if (p.strong) add(`sections:${p.name}`);
+    }
   } else if (kind === 'multi') {
     const counts = all.map((c) => countsOf(c.items));
     // invariant core: types with identical counts in all nine cells, and at least one such type

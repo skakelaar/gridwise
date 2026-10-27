@@ -119,6 +119,10 @@ export function predictAttribute(domain, known) {
   add('colAlt', altCheck((r, c) => r % 2 === 0));
   add('checker', altCheck((r, c) => (r + c) % 2 === 0));
 
+  // Each line may have its own A and B: A B A is still a simple mirror rule.
+  if (known[0][0] === known[0][2] && known[1][0] === known[1][2]) add('rowPalindrome', known[2][0]);
+  if (known[0][0] === known[2][0] && known[0][1] === known[2][1]) add('colPalindrome', known[0][2]);
+
   // Plausible readings outside the generator grammar.
   // Row 3 repeats row 1 / row 2; column 3 repeats column 1 / column 2.
   for (const r of [0, 1]) if (known[r][0] === known[2][0] && known[r][1] === known[2][1]) add(`copyRow${r}`, known[r][2]);
